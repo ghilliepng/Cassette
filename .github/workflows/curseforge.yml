@@ -45,7 +45,9 @@ jobs:
       - name: Package (and upload, for a release)
         uses: BigWigsMods/packager@v2
         with:
-          args: ${{ github.event_name != 'release' && '-d' || '' }} # -d: build only, no upload
+          # -n: name the zip Cassette-v0.1.2.zip and the CurseForge file v0.1.2 (no "-forever")
+          # -d: build only, no upload
+          args: "-n {package-name}-{project-version}:{project-version} ${{ github.event_name != 'release' && '-d' || '' }}"
         env:
           CF_API_KEY: ${{ github.event_name == 'release' && secrets.CF_API_KEY || '' }}
 
@@ -53,3 +55,4 @@ jobs:
         with:
           name: addon-zip
           path: .release/*.zip
+          include-hidden-files: true # .release starts with a dot
