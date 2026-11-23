@@ -784,11 +784,22 @@ function UI.Slider(parent, label, min, max, step, fmt, get, set)
         p.middle = add(s:CreateTexture(nil, "BACKGROUND"))
         p.left:SetAtlas("Minimal_SliderBar_Left", true)
         p.right:SetAtlas("Minimal_SliderBar_Right", true)
-        p.middle:SetAtlas("Minimal_SliderBar_Middle", true)
         p.left:SetPoint("LEFT")
         p.right:SetPoint("RIGHT")
-        p.middle:SetPoint("TOPLEFT", p.left, "TOPRIGHT")
-        p.middle:SetPoint("BOTTOMRIGHT", p.right, "BOTTOMLEFT")
+        -- the middle stretches between the ends; art that stretches sideways is named with a
+        -- leading underscore. Where the client has neither name, a plain bar stands in.
+        local middle = (hasAtlas("_Minimal_SliderBar_Middle") and "_Minimal_SliderBar_Middle")
+          or (hasAtlas("Minimal_SliderBar_Middle") and "Minimal_SliderBar_Middle")
+        if middle then
+          p.middle:SetAtlas(middle, false)
+          p.middle:SetPoint("TOPLEFT", p.left, "TOPRIGHT")
+          p.middle:SetPoint("BOTTOMRIGHT", p.right, "BOTTOMLEFT")
+        else
+          p.middle:SetColorTexture(0.32, 0.3, 0.27, 1)
+          p.middle:SetPoint("LEFT", p.left, "RIGHT")
+          p.middle:SetPoint("RIGHT", p.right, "LEFT")
+          p.middle:SetHeight(4)
+        end
         p.minimal = true
       else
         p.track = add(s:CreateTexture(nil, "BACKGROUND"))
