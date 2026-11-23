@@ -111,17 +111,6 @@ you anywhere.
 - **Tests:** `tools\luatest\run_all.py` (the addon, against a WoW stand-in), plus
   `tools\test_browse.py`, `tools\sim_protocol.py` and `tools\test_duck.py`.
 
-## Licence
-
-Copyright (C) 2026 ghilliepng. All rights reserved. Cassette is free to download and use, and
-its code is public so you can see exactly what it does, but it may not be copied, re-uploaded,
-modified or sold without permission. See [LICENSE](LICENSE) for the details.
-
-The app bundles some third-party libraries, each under its own licence: see
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
-
-Not affiliated with Spotify or Blizzard Entertainment.
-
 ## Screenshots
 
 **Three themes:** Classic, Modern and EllesmereUI.
@@ -139,3 +128,14 @@ Not affiliated with Spotify or Blizzard Entertainment.
 **Options**, and the **first-time setup** that walks new players through it.
 
 <img src="docs/screenshots/options.png" width="480" alt="The options window"> <img src="docs/screenshots/setup.png" width="380" alt="The first-time setup window">
+
+## Licence
+
+Copyright (C) 2026 ghilliepng. All rights reserved. Cassette is free to download and use, and
+its code is public so you can see exactly what it does, but it may not be copied, re-uploaded,
+modified or sold without permission. See [LICENSE](LICENSE) for the details.
+
+The app bundles some third-party libraries, each under its own licence: see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+Not affiliated with Spotify or Blizzard Entertainment.
