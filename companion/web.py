@@ -310,7 +310,10 @@ class WebApi:
             body["offset"] = offset
         try:
             self.call("PUT", "/me/player/play", body=body)
-            if not shuffled:
+            if shuffle is not None:
+                # Spotify can put back the shuffle a playlist had when it starts one: set it again
+                # once it has started (and if no device was awake before, this is the first time)
+                time.sleep(0.4)
                 self._set_shuffle(shuffle)
             return
         except SpotifyError as e:
@@ -318,6 +321,7 @@ class WebApi:
                 raise
         result = self._play_on_this_pc(body, open_spotify)
         if shuffle is not None:
+            time.sleep(0.4)
             self._set_shuffle(shuffle)
         return result
 

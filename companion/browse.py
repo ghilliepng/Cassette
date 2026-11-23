@@ -72,8 +72,9 @@ def song_count(playlist):
 
 
 def play_playlist(web, playlist, shuffle, open_spotify):
-    """Play a playlist from the top in order, or shuffled from a random song."""
-    offset = None
+    """Play a playlist from the top in order, or shuffled from a random song. In order starts at
+    the first song by name: Spotify may still have shuffle on for a moment as it starts."""
+    offset = {"position": 0}
     total = song_count(playlist)
     if shuffle and total:
         offset = {"position": random.randrange(total)}

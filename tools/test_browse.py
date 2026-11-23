@@ -130,7 +130,7 @@ def main():
     mine_view = len(live.views)
     run(b, "play", mine_view, 0, False)
     check("playing one of yours in order: from the top, shuffle off",
-          web.played[-1] == dict(context="spotify:playlist:p1", uris=None, offset=None, shuffle=False))
+          web.played[-1] == dict(context="spotify:playlist:p1", uris=None, offset={"position": 0}, shuffle=False))
     run(b, "page", mine_view, 1)
     check("page 2 has the last 3", live.views[-1]["rows"] == 3 and live.views[-1]["page"] == 1)
 
