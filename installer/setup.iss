@@ -50,11 +50,19 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 Filename: "{app}\{#AppName}.exe"; Description: "Start {#AppName} now"; Flags: nowait postinstall skipifsilent
+; an update the app started itself (updates.py: /VERYSILENT /RELAUNCH=1): start the new app
+Filename: "{app}\{#AppName}.exe"; Flags: nowait; Check: Relaunching
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
 
 [Code]
+// Started by the app to update itself: it closed so it could be replaced, so start it again.
+function Relaunching: Boolean;
+begin
+  Result := ExpandConstant('{param:relaunch|0}') = '1';
+end;
+
 // Uninstalling: offer to tidy up what the app made outside its own folder. Two questions, both
 // optional, skipped in a silent uninstall:
 //   - its settings and Spotify sign-in (%LOCALAPPDATA%\Cassette)

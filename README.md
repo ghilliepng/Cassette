@@ -21,6 +21,8 @@ Made for **WoW Forever**. Windows only.
 - **Quieter during dialogue:** with Spoken installed, Spotify turns down while it reads to you, and
   stays down until it's finished, even if you walk away.
 - **Settings:** right-click the player, or type `/cassette options`.
+- **Keeps itself up to date:** when there's a new version of the app, the game and the tray say
+  so, and one click installs it.
 
 ## How it works (and why there's an app)
 
@@ -45,6 +47,18 @@ The app doesn't read or change the game's memory, inject anything, or press keys
 5. Start WoW, or type `/reload` if it's already open. A short setup window walks you through the rest.
 
 To remove Cassette, uninstall it from Windows Settings > Apps like any other program.
+
+### Updates
+
+The app checks this page for a new version when it starts and twice a day. When there is one,
+it asks if you'd like to update now, and Cassette says so in game too: install it any time with
+**Update app** in the options (or `/cassette update`, or **Update** in the tray icon's menu). The app downloads it, checks it
+against the checksum GitHub lists, installs it and restarts, while your music and the game carry
+on. Update the addon from CurseForge or Wago as usual.
+
+Version 0.1.0 can't update itself: install 0.1.1 or newer by hand once, and it's automatic
+from then on. To turn the checks off, set `"check_updates": false` in
+`%LOCALAPPDATA%\Cassette\config.json`.
 
 ### About the "Windows protected your PC" warning
 
@@ -75,7 +89,8 @@ report the file to them as a false positive, or ask on the Issues page.
   Spotify* window in the Cassette app walks you through it in about two minutes.
 
 Your Spotify sign-in is stored only on your PC, encrypted with your Windows account. Cassette
-talks only to Spotify, and sends nothing anywhere else.
+talks only to Spotify, and to GitHub to look for new versions of the app. It sends nothing about
+you anywhere.
 
 ## Commands
 
@@ -84,6 +99,7 @@ talks only to Spotify, and sends nothing anywhere else.
 | `/cassette` | show or hide the player |
 | `/cassette options` | settings |
 | `/cassette setup` | the first-time setup again |
+| `/cassette update` | install a new version of the app, when there is one |
 | `/cassette duck 30` | how low the music goes during dialogue (% of your volume) |
 | `/cassette status` | connection details, for troubleshooting |
 

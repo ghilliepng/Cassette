@@ -12,6 +12,8 @@
 --   cv/ti/ar<a>   art a: cover picture, title strip, artist strip.
 --   v<n>_<f>      view n, a page of the browser, fields 0-4: kind, page, pages, rows, checksum;
 --                 pg<n> is its picture.
+--   app_0, app_1  the app's version and the newest one out (0: none known), read once after
+--                 the app first answers. Apps before 0.1.1 don't make them.
 --
 -- Numbers travel as picture sizes: a texture with one anchor and no size takes its file's
 -- size, and value v is the v-th size in SIZES below. Reading takes about 0.1 s, and only works
@@ -167,6 +169,13 @@ function JB:ApplyRecord(v)
   s.position = v[3] + (s.playing and age or 0)
   if s.duration > 0 and s.position > s.duration then s.position = s.duration end
   s.anchor = GetTime()
+  if s.appUpdating and GetTime() - s.appUpdateAt > 15 then   -- the new app is answering by now
+    s.appVersion, s.appUpdating = s.appUpdating, nil
+  end
+  if not self.appInfoAsked then   -- first word from the app: which version is it?
+    self.appInfoAsked = true
+    C_Timer.After(2, function() safely("app version", self.ReadAppInfo, self, 1) end)
+  end
   s.connected, s.everConnected, s.waitingSince, s.probeSince = true, true, nil, nil
   if v[1] ~= s.art then
     s.art = v[1]
@@ -215,6 +224,77 @@ function JB:ReadRecord(r)
     self:Log("record %d applied (art %d, %s)", r, v[1], v[5] % 2 == 1 and "playing" or "paused")
     self:ApplyRecord(v)
   end, 4)
+end
+
+--------------------------------------------------------------------------------
+-- The app's version, and updating it
+--------------------------------------------------------------------------------
+
+-- A version as the app sends it: major x 1024 + minor x 32 + patch (updates.py).
+local function versionText(c)
+  return ("%d.%d.%d"):format(math.floor(c / 1024), math.floor(c / 32) % 32, c % 32)
+end
+
+-- Reads app_0 and app_1. They never load from an app older than 0.1.1, which doesn't make them:
+-- that one has to be updated by hand.
+function JB:ReadAppInfo(try)
+  read({ LIVE .. "app_0", LIVE .. "app_1" }, function(sizes)
+    local s = self.state
+    if not sizes then
+      if try < 3 then
+        C_Timer.After(5, function() safely("app version", self.ReadAppInfo, self, try + 1) end)
+      else
+        self:Log("the app doesn't say its version: one before 0.1.1")
+        s.appOld = true
+        self:AppNews()
+      end
+      return
+    end
+    local mine, newest = decode(sizes[1]), decode(sizes[2])
+    if mine <= 0 then return end   -- not filled in yet
+    s.appVersion = versionText(mine)
+    s.appNewest = newest > mine and versionText(newest) or nil
+    self:Log("app %s%s", s.appVersion, s.appNewest and (", " .. s.appNewest .. " is out") or "")
+    self:AppNews()
+  end, 4)
+end
+
+-- Once a session, in chat; the options show it too.
+function JB:AppNews()
+  local s = self.state
+  if not self.toldAppNews and (s.appNewest or s.appOld) then
+    self.toldAppNews = true
+    if s.appNewest then
+      self:Print(("app update: %s is out. Type /cassette update to install it, or use Update app in the "
+        .. "options."):format(s.appNewest))
+    else
+      self:Print("app on your PC is out of date. Get the new one from " .. self.COMPANION_URL
+        .. " (if you've just installed it, type /reload).")
+    end
+  end
+  if self.RefreshOptionsStatus then self:RefreshOptionsStatus() end
+end
+
+-- /cassette update, or Update app in the options: the app downloads and installs its new
+-- version, and restarts. The music and the game carry on.
+function JB:UpdateApp()
+  local s = self.state
+  if s.appNewest and s.connected then
+    s.appUpdating, s.appNewest, s.appUpdateAt = s.appNewest, nil, GetTime()
+    self:Command("UPDATE")
+    self:Print(("app: updating to %s. It restarts by itself in a few seconds."):format(s.appUpdating))
+  elseif s.appUpdating then
+    self:Print("app: updating.")
+  elseif s.appOld then
+    self:Print("app on your PC is too old to update itself: get the new one from " .. self.COMPANION_URL)
+  elseif not s.connected then
+    self:Print("app isn't running.")
+  elseif s.appVersion then
+    self:Print(("app is up to date (%s)."):format(s.appVersion))
+  else
+    self:Print("app hasn't said its version yet: try again in a moment.")
+  end
+  if self.RefreshOptionsStatus then self:RefreshOptionsStatus() end
 end
 
 local loadingArt, artTried = nil, 0

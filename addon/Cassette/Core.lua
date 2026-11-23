@@ -9,7 +9,7 @@
 local ADDON, JB = ...
 _G.Cassette = JB
 
-JB.version = "0.1.0"
+JB.version = "0.1.1"
 JB.MEDIA = "Interface\\AddOns\\Cassette\\Media\\"
 JB.startTime = GetTime()
 
@@ -193,6 +193,8 @@ SlashCmdList.CASSETTE = function(input)
       if JB.setup and JB.setup:IsShown() then JB:RefreshSetup() end
       JB:ShowSetup()
     else JB:Print("restart WoW once to finish installing the setup window.") end
+  elseif cmd == "update" then     -- a new version of the app on the PC (Live.lua)
+    JB:UpdateApp()
   elseif cmd == "showcase" then   -- screenshots for the download pages (see Options.lua)
     if JB.Showcase then JB:Showcase(arg ~= "" and arg or nil) end
   elseif cmd == "lock" or cmd == "unlock" then

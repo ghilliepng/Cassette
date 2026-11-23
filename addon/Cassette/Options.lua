@@ -134,6 +134,10 @@ function JB:CreateOptions()
     if JB.ShowSetup then JB:ShowSetup() end
   end)
   first:SetPoint("LEFT", setup, "RIGHT", 8, 0)
+  -- a new version of the app is out: install it from here
+  local update = UI.Button(f, "Update app", 110, function() JB:UpdateApp() end, true)
+  update:SetPoint("TOPLEFT", setup, "BOTTOMLEFT", 0, -6)
+  f.updateButton = update
 end
 
 -- The app's and the account's state, kept current while the window is open (Widget.lua calls
@@ -148,7 +152,15 @@ function JB:RefreshOptionsStatus()
     s.connected and good .. "running" or bad .. "not running",
     s.account and good .. "connected" or bad .. "not connected")
   if not s.account then text = text .. "\n" .. dim .. "Connect it for playlists, liked songs and search.|r" end
+  if s.appUpdating then
+    text = text .. "\n" .. good .. ("Updating the app to %s...|r"):format(s.appUpdating)
+  elseif s.appNewest then
+    text = text .. "\n" .. good .. ("A new version of the app is out: %s|r"):format(s.appNewest)
+  elseif s.appOld then
+    text = text .. "\n" .. bad .. "The app is out of date: get the new one from GitHub.|r"
+  end
   f.spotifyStatus:SetText(text)
+  if f.updateButton then f.updateButton:SetShown(s.appNewest and s.connected and true or false) end
 end
 
 function JB:ToggleOptions()
@@ -206,6 +218,36 @@ local function shotRect(frames)
   return x, y, math.floor((r - l) * k) + 2 * pad, math.floor((t - b) * k) + 2 * pad
 end
 
+-- Alt+Z hides the interface (UIParent) and everything on it. While the showcase runs, Cassette's
+-- frames sit on a holder of their own instead, at the same scale, so they stay on screen and the
+-- pictures show only Cassette and the world behind it. Afterwards they go back on UIParent, and
+-- hide with the rest of the interface again.
+local lifted = {}
+local function liftFrames(frames)
+  local holder = _G.CassetteShowcase or CreateFrame("Frame", "CassetteShowcase", nil)
+  holder:SetScale(UIParent:GetEffectiveScale())
+  holder:SetAllPoints(UIParent)
+  holder:Show()
+  for _, fr in ipairs(frames) do
+    if fr and not lifted[fr] then
+      local strata, level = fr:GetFrameStrata(), fr:GetFrameLevel()
+      lifted[fr] = { fr:GetParent(), strata, level }
+      fr:SetParent(holder)
+      if strata then fr:SetFrameStrata(strata) end
+      if level then fr:SetFrameLevel(level) end
+    end
+  end
+end
+local function dropFrames()
+  for fr, was in pairs(lifted) do
+    fr:SetParent(was[1] or UIParent)
+    if was[2] then fr:SetFrameStrata(was[2]) end
+    if was[3] then fr:SetFrameLevel(was[3]) end
+    lifted[fr] = nil
+  end
+  if _G.CassetteShowcase then _G.CassetteShowcase:Hide() end
+end
+
 function JB:Showcase(search)
   if self.showcasing then return end
   if not self.state.connected then
@@ -248,8 +290,11 @@ function JB:Showcase(search)
   end, function() return { self.options } end }
   steps[#steps + 1] = { "setup", function() hideWindows() self:ShowSetup() end, function() return { self.setup } end }
 
-  self:Print(("showcase: %d pictures, about %d seconds. Keep WoW in front and the mouse away from Cassette.")
-    :format(#steps, #steps * 4))
+  local function lift() liftFrames({ self.widget, self.browser, self.options, self.setup }) end
+  lift()
+  self:Print(("showcase: %d pictures, about %d seconds. Press Alt+Z now to hide the rest of your interface: "
+    .. "Cassette stays on screen until it's done, then hides with the rest, and Alt+Z brings it all back. "
+    .. "Keep WoW in front and the mouse away from Cassette."):format(#steps, #steps * 4 + 3))
   local i = 0
   local function nextStep()
     i = i + 1
@@ -258,17 +303,19 @@ function JB:Showcase(search)
       hideWindows()
       db.theme, db.layout, db.point, db.scale, db.shown = saved.theme, saved.layout, saved.point, saved.scale, saved.shown
       self:ApplyLook()
+      dropFrames()
       self.showcasing = nil
       self:Print("showcase done: the pictures are in the app's folder (%LOCALAPPDATA%\Cassette\showcase).")
       return
     end
     local ok, err = pcall(step[2])
     if not ok then self:Print("showcase: " .. tostring(err)) end
+    lift()   -- the browser and the windows are made the first time they open
     C_Timer.After(3, function()   -- the cover and song pictures redraw for the new look first
       local x, y, w, h = shotRect(step[3]())
       if x then self:Send("SHOT", ("%s %d %d %d %d"):format(step[1], x, y, w, h)) end
       C_Timer.After(1, nextStep)
     end)
   end
-  nextStep()
+  C_Timer.After(3, nextStep)   -- time to press Alt+Z
 end

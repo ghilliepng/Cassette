@@ -11,6 +11,8 @@ files in the addon's live folder and fills each one in just before the addon rea
   cv/ti/ar<a>.tga art a: cover, title strip, artist strip.
   v<n>_<f>.tga    view n (a page of the in-game browser), fields 0-4: kind, page, pages, rows,
                   checksum; pg<n>.tga is its picture.
+  app_0, app_1    this app's version and the newest one on GitHub (0: none known), as
+                  updates.code numbers. Not a pool: the addon reads them once after connecting.
 
 Numbers travel as picture sizes (see tga). Every message from the addon (through the strip)
 says where it is: its session number (nonce, new each load), the next mail, record, art and view
@@ -100,6 +102,7 @@ class Live:
         names += [f"{p}{a}" for a in range(ART) for p in ("cv", "ti", "ar")]
         names += [f"v{n}_{f}" for n in range(VIEWS) for f in range(5)]
         names += [f"pg{n}" for n in range(VIEWS)]
+        names += ["app_0", "app_1"]
         missing = [n for n in names if n + ".tga" not in have]
         placeholder = tga.number(0)
         for i, name in enumerate(missing):
@@ -108,6 +111,13 @@ class Live:
             if progress and i % 2000 == 0:
                 progress(i, len(missing))
         return len(missing)
+
+    def set_app_info(self, version, newest):
+        """The app's version and the newest release's, as updates.code numbers (newest 0: none).
+        WoW keeps its first read of them until a /reload."""
+        with self.lock:
+            tga.write(self.path("app_0"), tga.number(version))
+            tga.write(self.path("app_1"), tga.number(newest))
 
     # -- remembering the game session across a companion restart --
     def save_session(self):

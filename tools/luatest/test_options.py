@@ -71,6 +71,33 @@ steps = [
      'CassetteDB.theme = "modern"; Cassette:ApplyLook(); local set = Cassette.widget.themed.skin.modern; '
      'assert(set.native and #set.native == 9, "no native frame"); assert(rawget(Cassette.widget, "Center").shown)'),
     ("the first-time setup offers the theme and player style", 'Cassette:ShowSetup(); assert(Cassette.setup.looks and Cassette.setup.looks.h > 40, Cassette.setup.looks.h)'),
+    ("a newer app on GitHub: said once in chat, and in the options with an Update app button",
+     'FILES["app_0"] = Cassette.NumberSize(33); FILES["app_1"] = Cassette.NumberSize(34); '
+     'Cassette.state.connected = true; Cassette:ReadAppInfo(1); _mock_update(1); '
+     'assert(Cassette.state.appVersion == "0.1.1" and Cassette.state.appNewest == "0.1.2", tostring(Cassette.state.appNewest)); '
+     'assert(printed[#printed]:find("0.1.2 is out"), printed[#printed]); '
+     'Cassette.options:Show(); Cassette:RefreshOptionsStatus(); '
+     'assert(Cassette.options.spotifyStatus.text:find("new version of the app is out: 0.1.2")); assert(Cassette.options.updateButton.shown)'),
+    ("Update app asks the app to update itself, and the button goes",
+     'Cassette:UpdateApp(); assert(last("UPDATE"), "no UPDATE sent"); assert(not Cassette.options.updateButton.shown); '
+     'assert(Cassette.options.spotifyStatus.text:find("Updating the app to 0.1.2"))'),
+    ("up to date: no news, no button",
+     'local n = #printed; Cassette.toldAppNews, Cassette.state.appUpdating = nil, nil; FILES["app_1"] = Cassette.NumberSize(0); '
+     'Cassette:ReadAppInfo(1); _mock_update(1); assert(Cassette.state.appNewest == nil and #printed == n, printed[#printed]); '
+     'assert(not Cassette.options.updateButton.shown)'),
+    ("an app from before updates (no version files): told to get the new one by hand",
+     'FILES["app_0"], FILES["app_1"] = { 0, 0 }, { 0, 0 }; Cassette.state.appVersion = nil; Cassette:ReadAppInfo(1); _mock_update(30); '
+     'assert(Cassette.state.appOld); assert(printed[#printed]:find("out of date") and printed[#printed]:find("releases/latest"), printed[#printed]); '
+     'assert(Cassette.options.spotifyStatus.text:find("out of date")); Cassette.options:Hide()'),
+    ("showcase: Cassette moves off the interface, so Alt+Z leaves it on screen",
+     'Cassette.state.connected = true; Cassette:Showcase(); assert(Cassette.widget:GetParent() == CassetteShowcase); '
+     '_mock_update(3.5); assert(Cassette.widget:GetParent() == CassetteShowcase)'),
+    ("...the browser and the windows too, once they open",
+     '_mock_update(34); assert(Cassette.browser:GetParent() == CassetteShowcase and Cassette.options:GetParent() == CassetteShowcase)'),
+    ("...a picture for every step, then all back on the interface, which Alt+Z hides again",
+     '_mock_update(10); assert(not Cassette.showcasing); local n = 0; for _, m in ipairs(sent) do if m:match("^SHOT ") then n = n + 1 end end; '
+     'assert(n >= 9, n); for _, fr in ipairs({ Cassette.widget, Cassette.browser, Cassette.options, Cassette.setup }) do '
+     'assert(fr:GetParent() == UIParent) end; assert(not CassetteShowcase.shown)'),
     ("reset puts the bar back", 'CassetteDB.scale = 1.7; SlashCmdList.CASSETTE("reset"); assert(CassetteDB.scale == 1)'),
 ]
 ok = True

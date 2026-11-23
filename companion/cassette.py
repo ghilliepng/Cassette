@@ -25,9 +25,10 @@ import render    # noqa: E402
 import connect_window     # noqa: E402
 import spotify   # noqa: E402
 import strip     # noqa: E402
+import updates   # noqa: E402
 import web       # noqa: E402
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 DATA_DIR = os.path.join(os.environ.get("LOCALAPPDATA", HERE), "Cassette")
 OLD_NAME = "Jukebox"  # the working name before release: its data and autostart are carried over
 CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
@@ -37,6 +38,7 @@ FLAVOR = "_forever_"  # WoW Forever
 DEFAULTS = {
     "addon_dir": "",  # found at start-up (find_addon_dir) unless set here
     "ui_font": "",    # a font file to use when the game's own can't be read
+    "check_updates": True,  # ask GitHub for a newer version at start-up and twice a day
 }
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 STALE_SECONDS = 5  # commands older than this were drawn while we couldn't see them: drop them
@@ -175,9 +177,21 @@ def appdata_redirected():
     return None
 
 
+_mutex = None
+
+
 def single_instance():
-    ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\CassetteCompanion")
+    global _mutex
+    _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\CassetteCompanion")
     return ctypes.windll.kernel32.GetLastError() != 183  # ERROR_ALREADY_EXISTS
+
+
+def release_instance():
+    """Let go of the one-copy mutex: the installer waits for it to be gone (AppMutex)."""
+    global _mutex
+    if _mutex:
+        ctypes.windll.kernel32.CloseHandle(_mutex)
+        _mutex = None
 
 
 # -- start with Windows (per-user Run key, off unless turned on from the tray) --
@@ -222,6 +236,9 @@ class Companion:
         self.last_look = None  # the addon's last LOOK, to redraw once the game's fonts are read
         self.browser = browse.Browser(self.web, self.live, self.spotify.open_spotify, cfg["ui_font"], log)
         self.icon = None
+        self.update = None        # a newer release (updates.Release), once one is found
+        self.update_told = None   # the version the tray last announced
+        self.updating = False
 
     def open_setup(self):
         connect_window.open_setup(self.web, log, self.on_spotify_account)
@@ -391,14 +408,173 @@ class Companion:
         elif cmd == "SETUP":
             self.open_setup()
             return
+        elif cmd == "UPDATE":
+            self.install_update("game")
         # answered even when nothing changes; a check-in (H) too: the addon may be asking if we're there
         timer = threading.Timer(1.2, self.live.ack, (time.time(),))
         timer.daemon = True
         timer.start()
 
+    def check_pools(self):
+        """An addon manager (CurseForge, WowUp) updating the addon replaces its whole folder, and
+        the placeholder files in live\\ go with it, so nothing can reach the game. Make them again,
+        and ask for the /reload WoW needs to see new files."""
+        addon_dir = self.cfg["addon_dir"]
+        if os.path.exists(self.live.path("m0")) or not os.path.isfile(os.path.join(addon_dir, ADDON + ".toc")):
+            return
+        log("the addon's folder was replaced (an addon update?): making the placeholder files again")
+        t0 = time.time()
+        self.status = "preparing files"
+        try:
+            created = self.live.ensure_pools(lambda i, n: setattr(self, "status", f"preparing files {100 * i // n}%"))
+        finally:
+            self.status = "running"
+        log(f"created {created} placeholder files in {time.time() - t0:.1f} s")
+        self.tell_game_versions()
+        if strip.wow_window():
+            self.notify(f"The {ADDON} addon was updated: type /reload once in WoW so it can show your music.")
+
+    # -- new versions (updates.py) --
+    def tell_game_versions(self):
+        """This app's version and the newest one found (0: none) go to the game (live: app_0/1)."""
+        newest = self.update.version if self.update else None
+        try:
+            self.live.set_app_info(updates.code(updates.parse(VERSION)), updates.code(newest))
+        except OSError as e:
+            log(f"couldn't tell the game the app's version: {e}")
+
+    def check_updates(self, manual=False, announce=True):
+        """Ask GitHub for the newest release. Returns it if it's newer than this app, else None.
+        self.checked says whether GitHub answered."""
+        self.checked = False
+        try:
+            rel = updates.latest()
+        except Exception as e:
+            log(f"couldn't check for updates: {e}")
+            if manual:
+                self.notify("Cassette couldn't check for updates. Is this PC online?")
+            return None
+        self.checked = True
+        if not announce and rel:
+            self.update_told = rel.version  # (asked about it instead: no notification too)
+        if not rel or rel.version <= updates.parse(VERSION):
+            if self.update:
+                self.update = None
+                self.tell_game_versions()
+                self.refresh_menu()
+            if manual:
+                self.notify(f"You have the newest version of Cassette ({VERSION}).")
+            return None
+        self.update = rel
+        self.tell_game_versions()
+        self.refresh_menu()
+        if manual or self.update_told != rel.version:
+            self.update_told = rel.version
+            log(f"a new version is out: {updates.text(rel.version)}")
+            self.notify(f"Cassette {updates.text(rel.version)} is out. Choose Update in this icon's menu, "
+                        "or Update app in Cassette's options in WoW.")
+        elif not announce:
+            log(f"a new version is out: {updates.text(rel.version)}")
+        return rel
+
+    def update_loop(self):
+        """Look for a new version soon after starting, and then twice a day. The first time GitHub
+        answers, a new version gets a question box; later ones, a notification."""
+        updates.clear_downloads(os.path.join(DATA_DIR, "updates"))
+        time.sleep(8)
+        first, failures = True, 0
+        while True:
+            wait = 12 * 3600
+            if self.cfg.get("check_updates", True):
+                rel = self.check_updates(announce=not first or bool(strip.wow_window()))
+                if self.checked:
+                    if rel and first:
+                        self.ask_to_update(rel)
+                    first, failures = False, 0
+                elif first and failures < 10:  # not online yet, just after Windows starts: again soon
+                    failures += 1
+                    wait = 60
+            time.sleep(wait)
+
+    def ask_to_update(self, rel):
+        """At start-up: a new version is out, so ask whether to install it now. Not while WoW is
+        open, where a box would jump in front of the game (and an Enter meant for chat would
+        answer it): the game shows the news itself."""
+        if strip.wow_window():
+            return
+        new = updates.text(rel.version)
+        text = (f"Cassette {new} is out. You have {VERSION}.\n\n"
+                "Update now? It takes a few seconds, and Cassette starts again by itself. "
+                "Your music keeps playing.\n\n"
+                "Choose No to update later, from the Cassette icon by the clock or in Cassette's "
+                "options in WoW.")
+        MB_YESNO, MB_ICONINFORMATION, MB_SETFOREGROUND, MB_TOPMOST, IDYES = 0x4, 0x40, 0x10000, 0x40000, 6
+        answer = ctypes.windll.user32.MessageBoxW(None, text, "Cassette update",
+                                                  MB_YESNO | MB_ICONINFORMATION | MB_SETFOREGROUND | MB_TOPMOST)
+        if answer == IDYES:
+            self.install_update("start-up question")
+        else:
+            log(f"update to {new}: not now")
+
+    def install_update(self, source):
+        """Download the new version, check it, and let its installer replace this app. The
+        installer starts the new one when it's done, and WoW carries on without a /reload."""
+        if self.updating:
+            return
+        if not getattr(sys, "frozen", False):  # running from source: there's nothing to replace
+            log("update: not the installed app, so opening the releases page instead")
+            import webbrowser
+            webbrowser.open(updates.PAGE)
+            return
+        self.updating = True
+        threading.Thread(target=self._update, args=(source,), daemon=True, name="update").start()
+
+    def _update(self, source):
+        try:
+            rel = self.update or self.check_updates(manual=True)
+            if not rel:
+                return
+            log(f"update to {updates.text(rel.version)} (from the {source}): downloading")
+            self.status = f"downloading {updates.text(rel.version)}"
+            path = updates.download(rel, os.path.join(DATA_DIR, "updates"))
+            log(f"update: {rel.name} downloaded and checked; starting it")
+            release_instance()
+            try:
+                updates.run_installer(path)
+            except OSError:
+                single_instance()
+                raise
+            self.quit()  # out of the installer's way; it starts the new app
+        except Exception as e:
+            log(f"update failed: {e}")
+            self.notify(f"Cassette couldn't update itself ({e}). The new version is at {updates.PAGE}")
+        finally:
+            self.updating = False
+            if self.status.startswith("downloading"):
+                self.status = "running"
+
+    def refresh_menu(self):
+        try:
+            if self.icon:
+                self.icon.update_menu()
+        except Exception:
+            pass
+
+    def quit(self):
+        try:
+            self.mixer.restore_now()
+        except Exception as e:
+            log(f"couldn't end the music dip: {e}")
+        if self.icon:
+            self.icon.stop()
+
     def keep_window_filled(self):
         while True:
             time.sleep(3)
+            try:
+                self.check_pools()
+            except OSError as e:
+                log(f"couldn't make the placeholder files: {e}")
             try:
                 self.live.top_up()
             except Exception as e:
@@ -427,6 +603,7 @@ class Companion:
             self.notify(f"{ADDON} couldn't find WoW Forever or its addon. Install the {ADDON} addon, then restart this app.")
             for th in (self.spotify, self.mixer):
                 th.start()
+            threading.Thread(target=self.update_loop, daemon=True, name="updates").start()
             return
         self.status = "preparing files"
         t0 = time.time()
@@ -440,9 +617,11 @@ class Companion:
             if self.live.restore_session():  # restarted while WoW was running: pick up where we were
                 # the looks too: the game only says when they change
                 self.browser.set_look(self.live.accent, self.live.ui_font, self.live.look)
+        self.tell_game_versions()
         for th in (self.spotify, self.mixer, self.strip):
             th.start()
         threading.Thread(target=self.keep_window_filled, daemon=True, name="top-up").start()
+        threading.Thread(target=self.update_loop, daemon=True, name="updates").start()
         threading.Thread(target=self.game_fonts, daemon=True, name="game-fonts").start()
         self.status = "running"
         log(f"Cassette companion {VERSION} running")
@@ -481,11 +660,10 @@ class Companion:
 
         def quit_(icon, item):
             log("quit from the tray")
-            try:
-                self.mixer.restore_now()
-            except Exception as e:
-                log(f"couldn't end the music dip: {e}")
-            icon.stop()
+            self.quit()
+
+        def check(icon, item):
+            threading.Thread(target=self.check_updates, args=(True,), daemon=True, name="check").start()
 
         # the installed app's uninstaller (Inno Setup puts it beside the app)
         uninstaller = os.path.join(os.path.dirname(sys.executable), "unins000.exe")
@@ -503,9 +681,12 @@ class Companion:
 
         menu = pystray.Menu(
             pystray.MenuItem(lambda item: self.describe(), None, enabled=False),
+            pystray.MenuItem(lambda item: f"Update to {updates.text(self.update.version)}" if self.update else "Update",
+                             lambda icon, item: self.install_update("tray"), visible=lambda item: bool(self.update)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(spotify_item, lambda icon, item: self.open_setup()),
             pystray.MenuItem("Start with Windows", toggle_autostart, checked=lambda item: autostart_on()),
+            pystray.MenuItem("Check for updates", check),
             pystray.MenuItem("Open log", open_log),
             pystray.MenuItem("Uninstall Cassette...", uninstall,
                              visible=getattr(sys, "frozen", False) and os.path.exists(uninstaller)),

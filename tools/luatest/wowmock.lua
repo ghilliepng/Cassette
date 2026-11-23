@@ -41,9 +41,14 @@ local function mock(kind)
     elseif k == "GetHeight" then f = function(self) return self.h > 0 and self.h or 768 end
     elseif k == "GetStringWidth" then f = function() return 40 end
     elseif k == "GetTop" then f = function() return 100 end
+    elseif k == "GetBottom" then f = function(self) return 100 - (self.h > 0 and self.h or 50) end
+    elseif k == "GetLeft" then f = function() return 10 end
+    elseif k == "GetRight" then f = function(self) return 10 + (self.w > 0 and self.w or 120) end
     elseif k == "HasFocus" then f = function() return false end
     elseif k == "SetText" then f = function(self, s) self.text = s end
     elseif k == "GetText" then f = function(self) return self.text end
+    elseif k == "SetParent" then f = function(self, p) self.parent = p end
+    elseif k == "GetParent" then f = function(self) return self.parent end
     elseif k == "GetEffectiveScale" then f = function() return 0.64 end
     elseif k == "GetPoint" then f = function() return "BOTTOMRIGHT", nil, "BOTTOMRIGHT", -40, 60 end
     elseif k == "SetShown" then f = function(self, v) self.shown = v and true or false end
@@ -64,8 +69,9 @@ local function mock(kind)
     return f
   end })
 end
-function CreateFrame(kind, name)
+function CreateFrame(kind, name, parent)
   local f = mock(kind)
+  f.parent = parent
   frames[#frames + 1] = f
   if name then _G[name] = f end
   return f
