@@ -19,7 +19,7 @@ MAX_WIDTH = 4096
 THEMES = {
     "ellesmere": dict(title=(255, 255, 255), artist=(165, 165, 172), row=(240, 240, 244), sub=(165, 165, 172),
                       note=(140, 140, 150), shadow=False),
-    "classic": dict(title=(255, 209, 0), artist=(230, 230, 230), row=(255, 209, 0), sub=(215, 215, 215),
+    "classic": dict(title=(255, 255, 255), artist=(215, 215, 215), row=(255, 255, 255), sub=(205, 205, 205),
                     note=(160, 160, 160), shadow=True),
     "modern": dict(title=(255, 255, 255), artist=(190, 184, 172), row=(250, 246, 238), sub=(182, 176, 164),
                    note=(150, 146, 138), shadow=True),

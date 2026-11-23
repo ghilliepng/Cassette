@@ -125,7 +125,9 @@ function JB:CreateBrowser()
   box.hint = box:CreateFontString(nil, "OVERLAY")
   JB:SetFont(box.hint, 10.5)
   box.hint:SetPoint("LEFT", 6, 0)
-  box.hint:SetText("Search songs, albums, artists")
+  box.hint:SetPoint("RIGHT", -20, 0)   -- inside the box, clear of the clear button
+  box.hint:SetWordWrap(false)          -- (cut short rather than spill out, in wider fonts)
+  box.hint:SetText("Songs, albums, artists")
   UI.Role(box.hint, "faint")
   box.clear = UI.Icon(box, "close", 10, function()
     box:SetText("")
@@ -244,6 +246,7 @@ function JB:ApplyBrowserLook()
   b.thumb.tex:SetColorTexture(self:Colour("dim"))
   for _, tab in ipairs(b.tabs) do tab.underline = true end
   self:PlaceBrowser()
+  self:LayoutList()   -- the player's size sets the scale: line the rows up with the pages again
   self:RefreshBrowser()
 end
 
@@ -367,8 +370,9 @@ local function addPage(L, n, kind, page, pages, rows, path, size, rowH)
   -- a page can arrive twice (asked again, or redrawn for the song now playing): the newest wins
   if L.pics[page] and L.pics[page].n > n then return L end
   if n > (L.ref or 0) then L.ref = n end
-  if rows == ROWS then L.rowH, L.pageH = rowH, rowH * ROWS end
-  L.pics[page] = { n = n, path = path, size = size, rows = rows, rowH = rowH }
+  if rows == ROWS then L.rowH, L.pageH, L.rowPx = rowH, rowH * ROWS, size[2] / rows end
+  L.pics[page] = { n = n, path = path, size = size, rows = rows, rowH = rowH,
+                   rowPx = rows > 0 and size[2] / rows or nil }   -- (pixels: see LayoutList)
   L.asked[page] = nil
   if page == pages - 1 then L.lastRows = rows end
   L.total = (pages - 1) * L.pageH + (L.lastRows or ROWS) * L.rowH
@@ -430,8 +434,15 @@ function JB:LayoutList()
     for _, r in ipairs(sl.rows) do r:Hide() end
   end
   if not L then return end
-  b.content:SetHeight(math.max(1, L.total))
+  -- heights from the pictures' own pixels at today's scale: if the interface scale has changed
+  -- since a page came (another UI addon turned on or off), its rows still line up with it
   local ppu = self:PPU100() / 100
+  if L.rowPx then L.rowH, L.pageH = L.rowPx / ppu, L.rowPx / ppu * ROWS end
+  L.total = (L.pages - 1) * L.pageH + (L.lastRows or ROWS) * L.rowH
+  for _, pic in pairs(L.pics) do
+    if pic.rowPx then pic.rowH = pic.rowPx / ppu end
+  end
+  b.content:SetHeight(math.max(1, L.total))
   for k, pic in pairs(L.pics) do
     local sl = slot(self, k)
     local top = k * L.pageH

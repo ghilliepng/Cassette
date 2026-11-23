@@ -24,7 +24,9 @@ local THEMES = {
   classic = {
     name = "Classic",
     text = { 1, 1, 1 }, dim = { 0.82, 0.82, 0.82 }, faint = { 0.55, 0.55, 0.55 },
-    heading = GOLD, title = GOLD, icon = GOLD, iconHover = { 1, 1, 1 }, tab = GOLD,
+    -- gold for headings and titles; buttons and tabs off-white, so the accent colour (which can
+    -- be a gold or yellow class colour) stands out on what's selected, playing or switched on
+    heading = GOLD, title = GOLD, icon = { 0.9, 0.88, 0.82 }, iconHover = GOLD, tab = { 0.85, 0.85, 0.85 },
     shadow = true,
     outset = { bar = 4, panel = 4, window = 7 },   -- how far the border reaches past the frame
     progress = { h = 4, texture = "Interface\\TargetingFrame\\UI-StatusBar", bg = { 0, 0, 0, 0.6 } },

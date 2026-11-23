@@ -117,6 +117,15 @@ function JB:SetFont(fs, size)
   if obj and fs.SetFontObject then pcall(fs.SetFontObject, fs, obj) end
   local ok, res = pcall(fs.SetFont, fs, self:FontPath(), size, self:FontFlags())
   if not ok or res == false then pcall(fs.SetFont, fs, STANDARD_TEXT_FONT, size, "") end
+  -- text already showing keeps the width measured for the old font (or no shadow), so its last
+  -- letter or two would wrap: set it again to measure it afresh
+  if fs.GetObjectType and fs:GetObjectType() == "FontString" then
+    local text = fs:GetText()
+    if text and text ~= "" then
+      fs:SetText("")
+      fs:SetText(text)
+    end
+  end
 end
 
 function JB:ApplyFonts()

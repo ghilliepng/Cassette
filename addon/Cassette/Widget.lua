@@ -370,6 +370,9 @@ function JB:CreateWidget()
   pcall(ev.RegisterEvent, ev, "UI_SCALE_CHANGED")
   ev:SetScript("OnEvent", function()
     JB.UI.Skin(f, "bar", self.db.bgAlpha or 0.88)   -- hairlines stay one pixel
+    -- the browser's kept tabs were drawn for the old scale: fetch them afresh when next opened
+    self.tabLists = {}
+    if self.LayoutList then self:LayoutList() end
     self:Send("H")  -- new pixels per unit: the companion redraws the text to stay sharp
   end)
 

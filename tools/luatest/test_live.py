@@ -137,6 +137,13 @@ steps = [
     ("a tab seen before comes back at once, where you'd scrolled to",
      'Cassette.list.target = 300; wait(1); Cassette.browser.tabSaved.scripts.OnClick(); assert(Cassette.list.kind == 7); '
      'Cassette.browser.tabLiked.scripts.OnClick(); assert(Cassette.list.kind == 3 and Cassette.list.y > 250, Cassette.list.y)'),
+    ("rows stay in line with the pictures after the interface scale changes",
+     'local old = Cassette.PPU100; Cassette.PPU100 = function() return 150 end; Cassette:LayoutList(); '
+     'local L = Cassette.list; local pic = L.pics[0]; local sl = Cassette.browser.slots[0]; '
+     'local expect = pic.size[2] / 1.5 / pic.rows; '
+     'assert(math.abs(sl.rows[2].h - expect) < 0.01, sl.rows[2].h .. " vs " .. expect); '
+     'assert(math.abs(sl.tex.h - pic.size[2] / 1.5) < 0.01, "picture height"); '
+     'Cassette.PPU100 = old; Cassette:LayoutList()'),
     ("Escape closes it", 'local found = false; for _, n in ipairs(UISpecialFrames) do found = found or n == "CassetteBrowser" end; assert(found)'),
     ("status shows read statistics", 'SlashCmdList.CASSETTE("status")'),
     ("the log is saved at logout", '_mock_fire("PLAYER_LOGOUT"); assert(#CassetteDB.debug > 3 and CassetteDB.cursors.view >= 5)'),
