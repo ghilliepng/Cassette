@@ -5,7 +5,7 @@
 **Control Spotify from inside WoW.** A compact player with the song that's playing, its cover, a
 live progress bar and the controls, right in your UI.
 
-- **Always up to date:** song, artist and cover change the moment Spotify does.
+- **Stays in sync:** song, artist and cover change the moment Spotify does.
 - **Play, pause, skip, shuffle and volume** with a click.
 - **Your music:** playlists, liked songs, and search for songs, albums and artists, in a
   scrolling browser. The song that's playing is highlighted.
