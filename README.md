@@ -11,7 +11,7 @@ NPC dialogue.
 
 Made for **WoW Forever**. Windows only.
 
-<p align="center"><img src="docs/screenshots/search.png" width="480" alt="The Cassette player with its browser showing search results"></p>
+<p align="center"><img src="docs/screenshots/card.png" width="300" alt="The Cassette player in its card layout"></p>
 
 ## Features
 
@@ -35,6 +35,10 @@ Made for **WoW Forever**. Windows only.
 **Five layouts:** bar (above), card, stacked with the controls below or above, and slim.
 
 <img src="docs/screenshots/layouts.png" width="640" alt="The card, stacked and slim layouts">
+
+**Search** for songs, albums and artists, and play them from the list.
+
+<img src="docs/screenshots/search.png" width="480" alt="Search results in the browser">
 
 **Options**, and the **first-time setup** that walks new players through it.
 
