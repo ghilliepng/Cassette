@@ -1,9 +1,10 @@
-"""Spotify through Windows' own media controls, and its volume through the Windows mixer.
+"""The music app (Spotify, YouTube Music or Apple Music: see players.py) through Windows' own
+media controls, and its volume through the Windows mixer.
 
 Windows' media session (the one behind the volume pop-up) gives the song, artist, album, cover,
 length, position and play state, and takes play/pause/next/previous/shuffle. It works with any
-Spotify account and needs no sign-in. Volume is Spotify's slider in the Windows mixer, so game
-sound is never touched.
+account and needs no sign-in. Volume is the app's slider in the Windows mixer, so game sound is
+never touched.
 """
 import asyncio
 import json
@@ -15,12 +16,14 @@ from dataclasses import dataclass, field, replace
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as Manager
 from winrt.windows.storage.streams import Buffer, InputStreamOptions
 
+import players
+
 PLAYING = 4  # GlobalSystemMediaTransportControlsSessionPlaybackStatus.PLAYING
 
 
 @dataclass
 class Player:
-    available: bool = False      # Spotify has a media session (it's open and has played something)
+    available: bool = False      # the music app has a media session (it's open and has played)
     key: str = ""                # identifies the song: title | artist | album
     title: str = ""
     artist: str = ""
@@ -31,7 +34,7 @@ class Player:
     sample: float = 0.0          # time.time() of `position`
     playing: bool = False
     shuffle: bool = False
-    volume: int = 100            # Spotify's slider in the Windows mixer, 0-100
+    volume: int = 100            # the app's slider in the Windows mixer, 0-100
     muted: bool = False
 
     def position_now(self):
@@ -45,16 +48,38 @@ def _seconds(td):
 
 
 class Spotify(threading.Thread):
-    """Watches Spotify about 3 times a second; calls on_change(player, reason) when something the
-    widget shows has changed."""
+    """Watches the music app about 3 times a second; calls on_change(player, reason) when
+    something the widget shows has changed. (Named for the first app it followed.)"""
 
-    def __init__(self, on_change, log):
+    def __init__(self, on_change, log, app=players.DEFAULT):
         super().__init__(daemon=True, name="spotify")
         self.on_change, self.log = on_change, log
+        self.app = players.known(app)   # which app to follow: a players.NAMES key
+        self.app_id = None              # the media session followed (its app ID), for the mixer
         self.player = Player()
         self.loop = asyncio.new_event_loop()
         self.session = None
         self.lock = threading.Lock()
+        self.opened_at = 0.0
+
+    def set_app(self, app):
+        """Follow another app from the next look (about a third of a second). The one left behind
+        is paused if it was playing, so the two don't play at once; the new one isn't started
+        (that's the player's play button)."""
+        app = players.known(app)
+        if app != self.app:
+            old, playing = self.session, self.player.playing
+            self.app = app
+            self.log(f"following {players.NAMES[app]}")
+            if old is not None and playing:
+                asyncio.run_coroutine_threadsafe(self._pause(old), self.loop)
+
+    async def _pause(self, session):
+        try:
+            await session.try_pause_async()
+            self.log("paused the app left behind")
+        except Exception as e:
+            self.log(f"couldn't pause the app left behind: {e}")
 
     # -- reading --
     def run(self):
@@ -74,13 +99,20 @@ class Spotify(threading.Thread):
             await asyncio.sleep(0.3)
 
     async def _poll(self, manager):
-        session = next((s for s in manager.get_sessions()
-                        if "spotify" in (s.source_app_user_model_id or "").lower()), None)
-        self.session = session
+        found = {}
+        for s in manager.get_sessions():
+            app_id = s.source_app_user_model_id or ""
+            if players.rank(self.app, app_id):
+                found[app_id] = (s, s.get_playback_info().playback_status == PLAYING)
+        app_id = players.pick(self.app, [(a, v[1]) for a, v in found.items()], self.app_id)
+        session = found[app_id][0] if app_id else None
+        if app_id != self.app_id:
+            self.log(f"music from {app_id}" if app_id else f"no {players.NAMES[self.app]} to follow")
+        self.session, self.app_id = session, app_id
         old = self.player
         if session is None:
             if old.available:
-                self._set(replace(Player(), volume=old.volume, muted=old.muted), "spotify closed")
+                self._set(replace(Player(), volume=old.volume, muted=old.muted), "closed")
             return
         props = await session.try_get_media_properties_async()
         timeline = session.get_timeline_properties()
@@ -103,7 +135,7 @@ class Spotify(threading.Thread):
             new.cover = b""
             reason = "song"
         elif not old.available:
-            reason = "spotify opened"
+            reason = "opened"
         elif playing != old.playing:
             reason = "play" if playing else "pause"
         elif new.shuffle != old.shuffle:
@@ -158,8 +190,9 @@ class Spotify(threading.Thread):
     async def _command(self, name):
         s = self.session
         if s is None:
-            if name in ("toggle", "play"):
-                self.open_spotify()
+            if name in ("toggle", "play") and time.time() - self.opened_at > 10:
+                self.opened_at = time.time()   # (one window, however often play is pressed)
+                players.open_app(self.app, self.log)
             return
         if name == "toggle":
             await s.try_toggle_play_pause_async()
@@ -168,9 +201,13 @@ class Spotify(threading.Thread):
         elif name == "prev":
             await s.try_skip_previous_async()
         elif name == "shuffle":
-            await s.try_change_shuffle_active_async(not self.player.shuffle)
+            if s.get_playback_info().controls.is_shuffle_enabled:
+                await s.try_change_shuffle_active_async(not self.player.shuffle)
+            else:
+                self.log(f"{players.NAMES[self.app]} doesn't take shuffle from other apps")
 
     def open_spotify(self):
+        """Spotify itself (the in-game browser plays on Spotify, whichever app is followed)."""
         exe = os.path.join(os.environ.get("APPDATA", ""), "Spotify", "Spotify.exe")
         try:
             os.startfile(exe if os.path.exists(exe) else "spotify:")
@@ -180,7 +217,7 @@ class Spotify(threading.Thread):
 
 
 class Mixer(threading.Thread):
-    """Spotify's volume in the Windows mixer.
+    """The music app's volume in the Windows mixer (in a browser, the whole browser's).
 
     `volume` (0-100) is the player's own setting, the one the widget shows. `duck` (0-1) scales
     it down without changing that number, to dip the music while Spoken reads. A dip fades in
@@ -227,8 +264,9 @@ class Mixer(threading.Thread):
 
     def _sessions(self):
         from pycaw.pycaw import AudioUtilities
+        app, app_id = self.spotify.app, self.spotify.app_id
         return [s for s in AudioUtilities.GetAllSessions()
-                if s.Process and s.Process.name().lower() == "spotify.exe"]
+                if s.Process and players.owns(app, app_id, s.Process.name())]
 
     def _read(self):
         sessions = self._sessions()
@@ -308,7 +346,7 @@ class Mixer(threading.Thread):
         self.volume = volume
         try:
             self._apply()
-            self.log(f"put Spotify's volume back to {volume} after an interrupted dip")
+            self.log(f"put the music's volume back to {volume} after an interrupted dip")
         except Exception as e:
             self.log(f"couldn't put the volume back: {e}")
         self._remember(None)

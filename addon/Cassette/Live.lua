@@ -175,6 +175,8 @@ function JB:ApplyRecord(v)
   if not self.appInfoAsked then   -- first word from the app: which version is it?
     self.appInfoAsked = true
     C_Timer.After(2, function() safely("app version", self.ReadAppInfo, self, 1) end)
+    -- and which music app to follow, if that was ever changed (the app keeps it otherwise)
+    if self.db.musicAppChanged or not self:IsSpotify() then self:SendMusicApp(true) end
   end
   s.connected, s.everConnected, s.waitingSince, s.probeSince = true, true, nil, nil
   if v[1] ~= s.art then
@@ -252,7 +254,7 @@ function JB:ReadAppInfo(try)
     end
     local mine, newest = decode(sizes[1]), decode(sizes[2])
     if mine <= 0 then return end   -- not filled in yet
-    s.appVersion = versionText(mine)
+    s.appVersion, s.appCode = versionText(mine), mine
     s.appNewest = newest > mine and versionText(newest) or nil
     self:Log("app %s%s", s.appVersion, s.appNewest and (", " .. s.appNewest .. " is out") or "")
     self:AppNews()

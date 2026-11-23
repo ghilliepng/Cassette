@@ -4,8 +4,9 @@
 
 # Cassette
 
-**Control Spotify from inside World of Warcraft.** A compact player with the song that's
-playing, its cover, a live progress bar and the controls, right in your UI. It can also turn
+**Control your music from inside World of Warcraft:** Spotify, YouTube Music or Apple Music. A
+compact player with the song that's playing, its cover, a live progress bar and the controls,
+right in your UI. It can also turn
 your music down while the [Spoken](https://www.curseforge.com/wow/addons/spoken) addon reads
 NPC dialogue.
 
@@ -16,7 +17,10 @@ Made for **WoW Forever**. Windows only.
 - **The player:** song, artist and cover, updated the moment the song changes, with play/pause,
   previous, next, shuffle and volume. Five layouts (bar, stacked with the controls below, stacked with them above, slim and card) and three themes:
   Classic, Modern and EllesmereUI.
-- **The browser** (the ☰ button): your playlists, playlists you've saved, liked songs, and search
+- **Spotify, YouTube Music or Apple Music:** pick one in the options. YouTube Music works in a
+  browser, its installed web app or a desktop app; Apple Music in its app or iTunes. See
+  [Music apps](#music-apps).
+- **The browser** (the ☰ button, Spotify only): your playlists, playlists you've saved, liked songs, and search
   for songs, albums and artists. Lists scroll; the song that's playing shows in your accent colour.
 - **Quieter during dialogue:** with Spoken installed, Spotify turns down while it reads to you, and
   stays down until it's finished, even if you walk away.
@@ -26,14 +30,14 @@ Made for **WoW Forever**. Windows only.
 
 ## Planned features
 
-- **Other music apps:** support for more than Spotify, such as YouTube Music and Apple Music.
+- **Playlists and search for YouTube Music and Apple Music:** for now, these work with Spotify only.
 
 ## How it works (and why there's an app)
 
 WoW addons can't talk to other programs, so Cassette comes in two parts:
 
 1. **The addon** draws the player in game.
-2. **The Cassette app** runs quietly in your system tray. It talks to Spotify on your PC and
+2. **The Cassette app** runs quietly in your system tray. It talks to your music app on your PC and
    hands the song, cover and lists to the addon. The addon passes your clicks back by drawing a
    thin line of coloured pixels in the top-left corner of the screen, which the app reads.
 
@@ -84,13 +88,36 @@ If you'd like to check before running it:
 Some antivirus programs are wary of new, unsigned apps too. If yours stops the installer, you can
 report the file to them as a false positive, or ask on the Issues page.
 
-## Spotify
+## Music apps
+
+Choose yours under **Music app** in Cassette's options, or in the first-time setup. Switching
+pauses the one you leave.
+
+### Spotify
 
 - **Play, pause, skip and volume** work with any Spotify account, through Windows' own media
   controls. No sign-in is needed.
 - **Playlists, liked songs and search** need **Spotify Premium** and a one-time connection.
   Spotify asks every player to create their own (free) developer app for this. The *Connect
   Spotify* window in the Cassette app walks you through it in about two minutes.
+
+### YouTube Music
+
+- Play it in a browser (Chrome, Edge, Brave, Firefox, Opera or Vivaldi), in YouTube Music's
+  installed web app (the browser's **Install** option), or in a desktop app such as Pear Desktop
+  or YTMDesktop. Play, pause, skip and volume work with any account, with no sign-in.
+- **In a browser,** Cassette shows whatever the browser is playing, so pause videos in other
+  tabs. The volume button and the dip during dialogue change the whole browser's volume. (The
+  desktop apps have their own.)
+- **Shuffle** stays in YouTube Music itself: browsers don't let other apps change it.
+- **Playlists, liked songs and search** are Spotify's only: YouTube Music doesn't let other apps
+  browse or start your music.
+
+### Apple Music
+
+- Play it in the Apple Music app (or iTunes). Play, pause, skip, shuffle and volume work from
+  the player.
+- **Playlists, liked songs and search** are Spotify's only, for now.
 
 Your Spotify sign-in is stored only on your PC, encrypted with your Windows account. Cassette
 talks only to Spotify, and to GitHub to look for new versions of the app. It sends nothing about
@@ -113,7 +140,8 @@ you anywhere.
 - **App:** Python 3.12. `companion\cassette.py` is the app; `tools\build_app.py` builds
   `Cassette.exe` and the installer (needs PyInstaller and Inno Setup 7).
 - **Tests:** `tools\luatest\run_all.py` (the addon, against a WoW stand-in), plus
-  `tools\test_browse.py`, `tools\sim_protocol.py` and `tools\test_duck.py`.
+  `tools\test_browse.py`, `tools\sim_protocol.py`, `tools\test_duck.py`, `tools\test_players.py`
+  and `tools\test_updates.py`.
 
 ## Screenshots
 
@@ -142,4 +170,4 @@ modified or sold without permission. See [LICENSE](LICENSE) for the details.
 The app bundles some third-party libraries, each under its own licence: see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-Not affiliated with Spotify or Blizzard Entertainment.
+Not affiliated with Spotify, Google (YouTube Music), Apple or Blizzard Entertainment.

@@ -51,6 +51,8 @@ local function mock(kind)
     elseif k == "GetParent" then f = function(self) return self.parent end
     elseif k == "GetEffectiveScale" then f = function() return 0.64 end
     elseif k == "GetPoint" then f = function() return "BOTTOMRIGHT", nil, "BOTTOMRIGHT", -40, 60 end
+    elseif k == "SetAlpha" then f = function(self, a) self.alpha = a end
+    elseif k == "GetAlpha" then f = function(self) return self.alpha or 1 end
     elseif k == "SetShown" then f = function(self, v) self.shown = v and true or false end
     elseif k == "Show" then f = function(self) self.shown = true end
     elseif k == "Hide" then f = function(self) self.shown = false end

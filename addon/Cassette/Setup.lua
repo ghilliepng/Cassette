@@ -1,5 +1,6 @@
 -- The first-setup window: shown once, the first time Cassette loads (and any time with /tape setup).
 -- It checks things off as they happen: the companion answering, the Spotify account connected.
+-- Step 2 is the music app: Spotify, YouTube Music or Apple Music (Spotify's account for Spotify).
 
 local _, JB = ...
 
@@ -23,9 +24,10 @@ local function line(parent, title)
   return mark, body, head
 end
 
--- Text height, wrapped (falls back to one line if the game can't say yet)
+-- Text height, wrapped (falls back to one line if the game can't say yet); a frame's own height
 local function height(fs, lines)
-  local h = fs.GetStringHeight and fs:GetStringHeight()
+  if not fs.GetStringHeight then return fs:GetHeight() end
+  local h = fs:GetStringHeight()
   return (h and h > 0) and h or 14 * (lines or 1)
 end
 
@@ -45,7 +47,7 @@ function JB:CreateSetup()
   local intro = UI.Text(f, 11.5, "dim")
   intro:SetPoint("TOPLEFT", 16, -36)
   intro:SetWidth(W - 32)
-  intro:SetText("Spotify in a compact player: the song, its cover and the controls, live in the game.")
+  intro:SetText("Your music in a compact player: the song, its cover and the controls, live in the game.")
   f.intro = intro
 
   -- 1. the companion
@@ -66,9 +68,15 @@ function JB:CreateSetup()
   url:SetScript("OnTextChanged", function(_, user) if user then url:SetText(JB.COMPANION_URL) end end)
   url:SetScript("OnEscapePressed", function() url:ClearFocus() end)
 
-  -- 2. Spotify account
-  f.spotifyMark, f.spotifyText, f.spotifyHead = line(f, "2. Connect your Spotify account (optional)")
-  f.spotifyButton = UI.Button(f, "Set up on PC", 110, function()
+  -- 2. the music app, and Spotify's account (the step's text under the choice)
+  f.spotifyMark, f.spotifyText, f.spotifyHead = line(f, "2. Choose your music app")
+  f.music = CreateFrame("Frame", nil, f)
+  f.music:SetPoint("TOPLEFT", f.spotifyHead, "BOTTOMLEFT", 0, -4)
+  f.musicChoice = JB:MusicChoice(f.music, W - 56)
+  f.musicChoice:SetPoint("TOPLEFT", f.music, "TOPLEFT", 0, 0)
+  f.spotifyText:ClearAllPoints()
+  f.spotifyText:SetPoint("TOPLEFT", f.musicChoice, "BOTTOMLEFT", 0, -8)
+  f.spotifyButton = UI.Button(f.music, "Set up on PC", 110, function()
     JB:Command("SETUP")
     JB:Print("the Connect Spotify window is open on your PC (Alt+Tab if it's behind the game).")
   end, true)
@@ -117,15 +125,23 @@ function JB:RefreshSetup()
     f.companionText:SetText("Companion is installed: Cassette can show and control your music.")
     f.url:Hide()
   else
-    f.companionText:SetText("A small program that talks to Spotify for the game. Get it here, start it, then "
+    f.companionText:SetText("A small program that talks to your music app for the game. Get it here, start it, then "
       .. "type /reload (if it's running already, give it a moment):")
     f.url:Show()
   end
-  tick(f.spotifyMark, account)
-  f.spotifyText:SetText(account and "Connected: browse your playlists, liked songs and search with the = button."
-    or "The controls work with any account. To browse your playlists, liked songs and search here, "
-    .. "connect it (Spotify allows this with Premium):")
-  f.spotifyButton:SetShown((connected or self.setupPreview) and not account and true or false)
+  local spotify = self:IsSpotify()
+  tick(f.spotifyMark, (not spotify and connected) or account)
+  if spotify then
+    f.spotifyText:SetText(account and "Connected: browse your playlists, liked songs and search with the = button."
+      or "The controls work with any account. To browse your playlists, liked songs and search here, "
+      .. "connect it (Spotify allows this with Premium):")
+  elseif self:MusicApp() == "youtube" then
+    f.spotifyText:SetText("Play it in your browser, in YouTube Music's installed app or in a YouTube Music "
+      .. "desktop app. In a browser, the volume is the whole browser's. Playlists and search are Spotify's only, for now.")
+  else
+    f.spotifyText:SetText("Play it in the Apple Music app (or iTunes). Playlists and search are Spotify's only, for now.")
+  end
+  f.spotifyButton:SetShown(spotify and (connected or self.setupPreview) and not account and true or false)
   local spoken = self.HasSpoken and self:HasSpoken()
   tick(f.spokenMark, spoken and self.db.duck)
   f.spokenText:SetText(spoken and "Spoken is installed: the music turns down while it reads NPC dialogue, and back up after."
@@ -143,16 +159,19 @@ function JB:LayoutSetup()
   local y = -36 - height(f.intro, 2) - 16
   local steps = {
     { f.companionHead, f.companionText, f.url, 6 },
-    { f.spotifyHead, f.spotifyText, f.spotifyButton, 8 },
+    { f.spotifyHead, f.music, false, 0 },   -- (a box: the choice, its text and the button)
     { f.spokenHead, f.spokenText, f.spokenCheck, 6 },
     { f.lookHead, f.lookText, f.looks, 8 },
   }
+  local box = f.musicChoice:GetHeight() + 8 + height(f.spotifyText, 2)
+  if f.spotifyButton:IsShown() then box = box + 8 + f.spotifyButton:GetHeight() end
+  f.music:SetSize(W - 56, box)
   for _, st in ipairs(steps) do
     local head, body, extra, gap = st[1], st[2], st[3], st[4]
     head:ClearAllPoints()
     head:SetPoint("TOPLEFT", f, "TOPLEFT", 40, y)
     y = y - height(head) - 4 - height(body, 2)
-    if extra:IsShown() then y = y - gap - extra:GetHeight() end
+    if extra and extra:IsShown() then y = y - gap - extra:GetHeight() end
     y = y - 18
   end
   f:SetHeight(-y + 36)

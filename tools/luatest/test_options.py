@@ -71,6 +71,42 @@ steps = [
      'CassetteDB.theme = "modern"; Cassette:ApplyLook(); local set = Cassette.widget.themed.skin.modern; '
      'assert(set.native and #set.native == 9, "no native frame"); assert(rawget(Cassette.widget, "Center").shown)'),
     ("the first-time setup offers the theme and player style", 'Cassette:ShowSetup(); assert(Cassette.setup.looks and Cassette.setup.looks.h > 40, Cassette.setup.looks.h)'),
+    # the music app: Spotify, YouTube Music or Apple Music
+    ("music app: Spotify unless chosen, and nothing said about it at start-up",
+     'assert(Cassette:MusicApp() == "spotify"); assert(not last("MUSIC"), last("MUSIC"))'),
+    ("choosing YouTube Music tells the app on the PC, and is kept",
+     'Cassette:SetMusicApp("youtube"); assert(last("MUSIC") == "MUSIC youtube", tostring(last("MUSIC"))); '
+     'assert(CassetteDB.musicApp == "youtube" and CassetteDB.musicAppChanged)'),
+    ("the player names it when it is not open",
+     'Cassette.state.available, Cassette.state.connected = false, true; Cassette:RefreshWidget(); '
+     'assert(Cassette.widget.status.text:find("^YouTube Music isn"), tostring(Cassette.widget.status.text))'),
+    ("shuffle is dimmed (YouTube Music cannot take it), and a click sends nothing",
+     'assert(Cassette.widget.shuffle.alpha == 0.35, tostring(Cassette.widget.shuffle.alpha)); local n = #sent; '
+     'Cassette.widget.shuffle.scripts.OnClick(Cassette.widget.shuffle); assert(#sent == n, sent[#sent]); '
+     'assert(printed[#printed]:find("shuffle"), printed[#printed])'),
+    ("the browser says playlists and search are Spotify only, and asks the app for nothing",
+     'Cassette.browser:Hide(); Cassette.view, Cassette.browserWaiting = nil, nil; local n = #sent; Cassette:ToggleBrowser(); '
+     'assert(#sent == n, sent[#sent]); assert(Cassette.browser.msg.text:find("Spotify only"), tostring(Cassette.browser.msg.text))'),
+    ("the options say so too, without Spotify set-up button",
+     'Cassette.options:Show(); Cassette:RefreshOptionsStatus(); assert(Cassette.options.spotifyStatus.text:find("Spotify only")); '
+     'assert(not Cassette.options.setupButton.shown); Cassette.options:Hide()'),
+    ("the first-time setup explains YouTube Music in step 2, without Spotify button",
+     'Cassette:RefreshSetup(); assert(Cassette.setup.spotifyText.text:find("browser")); assert(not Cassette.setup.spotifyButton.shown)'),
+    ("an app older than 0.2.0 cannot follow it: the player says to update",
+     'Cassette.state.appCode = 33; Cassette:RefreshWidget(); assert(Cassette.widget.status.text == "Update the Cassette app", '
+     'tostring(Cassette.widget.status.text)); Cassette.state.appCode = 64; Cassette:RefreshWidget(); '
+     'assert(Cassette.widget.status.text:find("isn"))'),
+    ("connecting again (the app restarted): the choice is sent once more",
+     'for i = #sent, 1, -1 do sent[i] = nil end; Cassette.appInfoAsked = nil; '
+     'Cassette:ApplyRecord({ 0, 0, 0, time() % 4096, 0, 0 }); assert(last("MUSIC") == "MUSIC youtube", tostring(last("MUSIC")))'),
+    ("Apple Music: shuffle is back, and step 2 talks about its app",
+     'Cassette:SetMusicApp("apple"); assert(last("MUSIC") == "MUSIC apple"); assert(Cassette.widget.shuffle.alpha == 1); '
+     'Cassette:RefreshSetup(); assert(Cassette.setup.spotifyText.text:find("Apple Music app"))'),
+    ("back to Spotify with the browser open: its first page is asked for, and Spotify button is back",
+     'Cassette.browser:Show(); Cassette.view, Cassette.browserWaiting = nil, nil; Cassette.state.account = false; '
+     'Cassette:SetMusicApp("spotify"); assert(last("MUSIC") == "MUSIC spotify"); assert(sent[#sent]:match("^BR "), sent[#sent]); '
+     'Cassette:RefreshSetup(); assert(Cassette.setup.spotifyButton.shown); Cassette.state.account = true; '
+     'Cassette.browser:Hide(); Cassette.setup:Hide(); Cassette.state.appCode = nil'),
     ("a newer app on GitHub: said once in chat, and in the options with an Update app button",
      'FILES["app_0"] = Cassette.NumberSize(33); FILES["app_1"] = Cassette.NumberSize(34); '
      'Cassette.state.connected = true; Cassette:ReadAppInfo(1); _mock_update(1); '

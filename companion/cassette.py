@@ -1,8 +1,9 @@
-"""Cassette companion: Spotify in WoW.
+"""Cassette companion: your music (Spotify, YouTube Music or Apple Music) in WoW.
 
-Runs in the system tray. Reads the Cassette addon's commands off the screen (strip), works
-Spotify through Windows' media controls and mixer (spotify), and sends the song, cover and
-play state back into the game through files in the addon's folder (live).
+Runs in the system tray. Reads the Cassette addon's commands off the screen (strip), works the
+music app through Windows' media controls and mixer (spotify, players), and sends the song,
+cover and play state back into the game through files in the addon's folder (live). Playlists
+and search are Spotify's (web, browse).
 
   pythonw cassette.py          normal start (tray icon, no window)
   python cassette.py --console same, and print the log to the console too
@@ -23,12 +24,13 @@ import browse    # noqa: E402
 import live      # noqa: E402
 import render    # noqa: E402
 import connect_window     # noqa: E402
+import players  # noqa: E402
 import spotify   # noqa: E402
 import strip     # noqa: E402
 import updates   # noqa: E402
 import web       # noqa: E402
 
-VERSION = "0.1.1"
+VERSION = "0.2.0"
 DATA_DIR = os.path.join(os.environ.get("LOCALAPPDATA", HERE), "Cassette")
 OLD_NAME = "Jukebox"  # the working name before release: its data and autostart are carried over
 CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
@@ -39,6 +41,7 @@ DEFAULTS = {
     "addon_dir": "",  # found at start-up (find_addon_dir) unless set here
     "ui_font": "",    # a font file to use when the game's own can't be read
     "check_updates": True,  # ask GitHub for a newer version at start-up and twice a day
+    "music_app": "spotify",  # the app to follow (players.NAMES); the game's options change it
 }
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 STALE_SECONDS = 5  # commands older than this were drawn while we couldn't see them: drop them
@@ -146,12 +149,16 @@ def load_config():
         found = find_addon_dir()
         if found:
             cfg["addon_dir"] = found
+    save_config(cfg)
+    return cfg
+
+
+def save_config(cfg):
     try:
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2)
     except OSError:
         pass
-    return cfg
 
 
 def appdata_redirected():
@@ -228,7 +235,7 @@ class Companion:
         self.status = "starting"
         self.last_game = 0.0
         self.live = live.Live(cfg["addon_dir"], cfg["ui_font"], log, os.path.join(DATA_DIR, "session.json"))
-        self.spotify = spotify.Spotify(self.on_spotify, log)
+        self.spotify = spotify.Spotify(self.on_spotify, log, cfg.get("music_app"))
         self.mixer = spotify.Mixer(self.spotify, log, os.path.join(DATA_DIR, "duck.json"))
         self.strip = strip.StripReader(self.on_message, log)
         self.web = web.WebApi(os.path.join(DATA_DIR, "spotify.bin"), log)
@@ -253,7 +260,7 @@ class Companion:
         self.live.publish()
 
     def on_spotify(self, player, reason):
-        if reason in ("song", "spotify opened", "spotify closed"):
+        if reason in ("song", "opened", "closed"):
             log(f"{reason}: {player.title} - {player.artist}" if player.available else reason)
         self.live.update(player)
         if reason == "song":
@@ -315,6 +322,17 @@ class Companion:
         log(f"look: cover {cover}, accent {r},{g},{b}, theme {look}, font {os.path.basename(font)}")
         self.browser.set_look((r, g, b), font, look)
         self.live.set_look(max(8, min(400, cover)), font, look, (r, g, b))
+
+    def set_music_app(self, key):
+        """MUSIC <spotify|youtube|apple>: the music app chosen in the game's options. Kept, so the
+        app follows it from start-up next time too."""
+        if key not in players.NAMES:
+            return
+        if key != self.cfg.get("music_app"):
+            self.cfg["music_app"] = key
+            save_config(self.cfg)
+            log(f"music app: {players.NAMES[key]}")
+        self.spotify.set_app(key)
 
     def take_shot(self, args):
         """SHOT <name> <x> <y> <w> <h>: the addon's showcase (/cassette showcase) asks for a picture of
@@ -410,6 +428,8 @@ class Companion:
             return
         elif cmd == "UPDATE":
             self.install_update("game")
+        elif cmd == "MUSIC":   # the music app chosen in the game's options (and at connecting)
+            self.set_music_app(args[0] if args else "")
         # answered even when nothing changes; a check-in (H) too: the addon may be asking if we're there
         timer = threading.Timer(1.2, self.live.ack, (time.time(),))
         timer.daemon = True
@@ -638,7 +658,8 @@ class Companion:
         p = self.spotify.player
         if self.status != "running":
             return f"Cassette: {self.status}"
-        song = f"{p.title} - {p.artist}" if p.available and p.title else "Spotify isn't playing"
+        song = (f"{p.title} - {p.artist}" if p.available and p.title
+                else f"{players.NAMES[self.spotify.app]} isn't playing")
         game = "in game" if time.time() - self.last_game < 30 else "waiting for WoW"
         return f"{song}  ({game})"
 

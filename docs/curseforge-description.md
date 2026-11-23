@@ -2,12 +2,14 @@
 
 # Cassette
 
-**Control Spotify from inside WoW.** A compact player with the song that's playing, its cover, a
+**Control your music from inside WoW:** Spotify, YouTube Music or Apple Music. A compact player with the song that's playing, its cover, a
 live progress bar and the controls, right in your UI.
 
-- **Stays in sync:** song, artist and cover change the moment Spotify does.
+- **Stays in sync:** song, artist and cover change the moment your music does.
 - **Play, pause, skip, shuffle and volume** with a click.
-- **Your music:** playlists, liked songs, and search for songs, albums and artists, in a
+- **Spotify, YouTube Music or Apple Music:** YouTube Music works in your browser, its
+  installed app or a desktop app; Apple Music in its app or iTunes.
+- **Your Spotify:** playlists, liked songs, and search for songs, albums and artists, in a
   scrolling browser. The song that's playing is highlighted.
 - **Quieter during dialogue:** with [Spoken](https://www.curseforge.com/wow/addons/spoken), your
   music turns down while NPCs talk, and back up when they finish.
@@ -16,11 +18,11 @@ live progress bar and the controls, right in your UI.
 
 ## Planned features
 
-- **Other music apps:** support for more than Spotify, such as YouTube Music and Apple Music.
+- **Playlists and search for YouTube Music and Apple Music:** for now, these work with Spotify only.
 
 ## You also need the Cassette app (Windows)
 
-WoW addons can't talk to Spotify on their own, so Cassette comes with a small app that runs in
+WoW addons can't talk to your music app on their own, so Cassette comes with a small app that runs in
 your system tray. **Download it from GitHub:** https://github.com/ghilliepng/Cassette/releases/latest
 
 It tells you in game when there's a new version, and updates itself with one click.
@@ -30,7 +32,8 @@ because Cassette is free and isn't signed with a paid certificate. Click **More 
 **Run anyway**. All of Cassette's code is public on GitHub, and each release lists a
 checksum so you can check your download is the real one.
 
-Playlists, liked songs and search need Spotify Premium; play, pause, skip and volume work with
-any account.
+Playlists, liked songs and search are Spotify's, and need Spotify Premium. The player works with
+any account. With YouTube Music in a browser, the volume is the whole browser's, and shuffle stays
+in YouTube Music.
 
-Right-click the player, or type `/cassette options`, for settings. Not affiliated with Spotify or Blizzard.
+Right-click the player, or type `/cassette options`, for settings. Not affiliated with Spotify, Google, Apple or Blizzard.

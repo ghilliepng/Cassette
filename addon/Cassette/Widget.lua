@@ -24,10 +24,10 @@ local _, JB = ...
 local M = JB.MEDIA
 local TITLE_H, ARTIST_H = 16, 14   -- render.TITLE_UNITS / ARTIST_UNITS
 
-local function tip(owner, text)
+local function tip(owner, text)   -- (text: a string, or a function giving one)
   owner:HookScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:SetText(text, 1, 1, 1)
+    GameTooltip:SetText(type(text) == "function" and text() or text, 1, 1, 1)
     GameTooltip:Show()
   end)
   owner:HookScript("OnLeave", function() GameTooltip:Hide() end)
@@ -268,11 +268,18 @@ function JB:CreateWidget()
   f.controls:SetSize(86, 20)
   f.shuffle = iconButton(f.controls, "shuffle", 13, function()
     local s = self.state
+    if not self:CanShuffle() then
+      self:Print(("%s doesn't let other apps shuffle: use the shuffle in %s itself."):format(
+        self:MusicName(), self:MusicName()))
+      return
+    end
     s.shuffle = not s.shuffle   -- show it straight away; the companion confirms
     self:RefreshWidget()
     if self.RefreshBrowser then self:RefreshBrowser() end
     self:Command("S")
-  end, "Shuffle", function(hover)
+  end, function()
+    return self:CanShuffle() and "Shuffle" or ("Shuffle: %s doesn't let other apps change it"):format(self:MusicName())
+  end, function(hover)
     if not self.state.shuffle then return nil end
     if hover then return self:AccentLight() end
     return self:Accent()
@@ -316,7 +323,10 @@ function JB:CreateWidget()
     self:RefreshWidget()
     self:Command("M")
   end)
-  tip(f.vol, "Spotify's volume (click to mute)\nPurple: dipped while Spoken reads")
+  tip(f.vol, function()
+    return ("%s's volume (click to mute)%s\nPurple: dipped while Spoken reads"):format(self:MusicName(),
+      self:MusicApp() == "youtube" and "\nIn a browser, it's the whole browser's volume" or "")
+  end)
   f.volUp = iconButton(f.volume, "plus", 12, function() nudge(1) end, "Louder")
   f.volUp:SetPoint("LEFT", f.vol, "RIGHT", 1, 0)
 
@@ -326,7 +336,10 @@ function JB:CreateWidget()
     else  -- Browser.lua is new: some clients only load new files after a full restart
       self:Print("restart WoW once to finish installing the browser.")
     end
-  end, "Your music: playlists, liked songs, search")
+  end, function()
+    return self:IsSpotify() and "Your music: playlists, liked songs, search"
+      or "Playlists, liked songs and search: Spotify only, for now"
+  end)
 
   f.time = f:CreateFontString(nil, "OVERLAY")
   self:SetFont(f.time, 10.5)
@@ -405,7 +418,10 @@ local function statusText(s)
     if GetTime() - JB.startTime < 15 then return "Connecting to Cassette...", "" end
     return "Start the Cassette companion", "then /reload if WoW was already open"
   end
-  if not s.available then return "Spotify isn't open", "Press play to open it" end
+  if not JB:AppFollowsMusicApp() then
+    return "Update the Cassette app", ("to use it with %s"):format(JB:MusicName())
+  end
+  if not s.available then return ("%s isn't open"):format(JB:MusicName()), "Press play to open it" end
   if s.art == 0 then return "Nothing playing", "" end
   if not JB.widget.shownArt then return "Loading...", "" end
   return nil
@@ -439,6 +455,7 @@ function JB:RefreshWidget()
   f.cover:SetDesaturated(line1 ~= nil)
   f.play.icon:SetTexture(M .. (s.playing and "pause" or "play"))
   f.shuffle:Paint()
+  f.shuffle:SetAlpha(self:CanShuffle() and 1 or 0.35)   -- YouTube Music: can't be shuffled from here
   if s.muted then
     f.volText:SetText("mute")
     f.volText:SetTextColor(0.9, 0.45, 0.45)

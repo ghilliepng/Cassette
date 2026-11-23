@@ -295,7 +295,7 @@ function JB:ToggleBrowser()
   end
   self:PlaceBrowser()
   b:Show()
-  if not self.view and not self.browserWaiting then
+  if not self.view and not self.browserWaiting and self:IsSpotify() then
     self:BrowserCommand("BR", "P", 0)
   end
   self:RefreshBrowser()
@@ -527,6 +527,10 @@ function JB:RefreshBrowser()
   local message
   if not s.connected and not s.everConnected then
     message = "The Cassette companion isn't running.\nStart it on your PC, then /reload if WoW was already open."
+  elseif not self:IsSpotify() then
+    message = ("Playlists, liked songs and search work with Spotify only, for now.\n"
+      .. "The player works with %s."):format(self:MusicName())
+    kind = nil
   elseif kind == KIND.SETUP then
     message = "Connect your Spotify account to browse your playlists,\nliked songs and search here. "
       .. "Spotify allows this with Premium."

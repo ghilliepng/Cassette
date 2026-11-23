@@ -6,7 +6,7 @@ files in the addon's live folder and fills each one in just before the addon rea
 
   m<k>.tga        mail, read in turn. Each holds the number of the newest record (0: nothing).
   r<n>_<f>.tga    record n, fields 0-6: art, length, position, when, flags, view, checksum.
-                  flags: 1 playing, 2 shuffle, 4 muted, 8 Spotify open, volume x 16,
+                  flags: 1 playing, 2 shuffle, 4 muted, 8 music app open, volume x 16,
                   2048 Spotify account connected (for the browser).
   cv/ti/ar<a>.tga art a: cover, title strip, artist strip.
   v<n>_<f>.tga    view n (a page of the in-game browser), fields 0-4: kind, page, pages, rows,

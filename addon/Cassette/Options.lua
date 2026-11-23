@@ -9,7 +9,7 @@
 local _, JB = ...
 
 local UI = JB.UI
-local W, H, COL = 560, 540, 240
+local W, H, COL = 560, 600, 240
 
 local function apply()
   JB:ApplyLook()
@@ -35,6 +35,12 @@ local PARTS = {
   { "bosses", "Boss stories" },
   { "chatter", "NPC chatter around you" },
 }
+
+-- The music app the player follows (the first-time setup shows it too).
+function JB:MusicChoice(parent, width)
+  return UI.Choice(parent, "The player shows and controls", JB.MUSIC_APPS, width,
+    function() return (JB:MusicApp()) end, function(v) JB:SetMusicApp(v) end)
+end
 
 -- The theme and player style choices (the first-time setup shows them too).
 function JB:ThemeChoice(parent, width)
@@ -92,7 +98,7 @@ function JB:CreateOptions()
     apply()
   end), 22, 16)
 
-  -- right: Spoken and Spotify
+  -- right: Spoken and the music app
   local R = column(f, 16 + COL + 48)
   R.add(UI.Heading(f, "NPC dialogue (Spoken)"), 16, 6)
   local spokenNote = R.add(UI.Text(f, 11, "dim"), 14, 4)
@@ -117,7 +123,8 @@ function JB:CreateOptions()
   end
 
   R.y = R.y - 12
-  R.add(UI.Heading(f, "Spotify"), 16, 6)
+  R.add(UI.Heading(f, "Music app"), 16, 6)
+  R.add(JB:MusicChoice(f, COL), nil, 10)
   -- the status can run to three lines: the buttons sit under it, wherever it ends
   local status = R.add(UI.Text(f, 11.5), 14, 6)
   status:SetWidth(COL)
@@ -129,11 +136,13 @@ function JB:CreateOptions()
     JB:Print("the Connect Spotify window is open on your PC (Alt+Tab if it's behind the game).")
   end, true)
   setup:SetPoint("TOPLEFT", status, "BOTTOMLEFT", 0, -10)
+  f.setupButton = setup   -- (Spotify's: shown when it's the music app)
   local first = UI.Button(f, "First-time setup", 110, function()
     f:Hide()
     if JB.ShowSetup then JB:ShowSetup() end
   end)
   first:SetPoint("LEFT", setup, "RIGHT", 8, 0)
+  f.firstButton = first
   -- a new version of the app is out: install it from here
   local update = UI.Button(f, "Update app", 110, function() JB:UpdateApp() end, true)
   update:SetPoint("TOPLEFT", setup, "BOTTOMLEFT", 0, -6)
@@ -148,10 +157,17 @@ function JB:RefreshOptionsStatus()
   local s = self.state
   local function hex(r, g, b) return ("|cff%02x%02x%02x"):format(r * 255, g * 255, b * 255) end
   local good, bad, dim = hex(self:Accent()), "|cffff6b6b", hex(self:Colour("dim"))
-  local text = ("Cassette app: %s|r\nSpotify account: %s|r"):format(
-    s.connected and good .. "running" or bad .. "not running",
-    s.account and good .. "connected" or bad .. "not connected")
-  if not s.account then text = text .. "\n" .. dim .. "Connect it for playlists, liked songs and search.|r" end
+  local spotify = self:IsSpotify()
+  local text = ("Cassette app: %s|r"):format(s.connected and good .. "running" or bad .. "not running")
+  if spotify then
+    text = text .. ("\nSpotify account: %s|r"):format(s.account and good .. "connected" or bad .. "not connected")
+    if not s.account then text = text .. "\n" .. dim .. "Connect it for playlists, liked songs and search.|r" end
+  else
+    text = text .. "\n" .. dim .. "Playlists, liked songs and search: Spotify only, for now.|r"
+    if s.connected and not self:AppFollowsMusicApp() then
+      text = text .. "\n" .. bad .. ("Update the app to use it with %s.|r"):format(self:MusicName())
+    end
+  end
   if s.appUpdating then
     text = text .. "\n" .. good .. ("Updating the app to %s...|r"):format(s.appUpdating)
   elseif s.appNewest then
@@ -161,6 +177,17 @@ function JB:RefreshOptionsStatus()
   end
   f.spotifyStatus:SetText(text)
   if f.updateButton then f.updateButton:SetShown(s.appNewest and s.connected and true or false) end
+  if f.setupButton then   -- "Set up on PC" connects Spotify: only there for Spotify
+    f.setupButton:SetShown(spotify)
+    f.firstButton:ClearAllPoints()
+    if spotify then
+      f.firstButton:SetPoint("LEFT", f.setupButton, "RIGHT", 8, 0)
+    else
+      f.firstButton:SetPoint("TOPLEFT", f.spotifyStatus, "BOTTOMLEFT", 0, -10)
+    end
+    f.updateButton:ClearAllPoints()
+    f.updateButton:SetPoint("TOPLEFT", spotify and f.setupButton or f.firstButton, "BOTTOMLEFT", 0, -6)
+  end
 end
 
 function JB:ToggleOptions()
@@ -181,7 +208,7 @@ ev:SetScript("OnEvent", function()
   local panel = CreateFrame("Frame")
   local text = UI.Text(panel, 13)
   text:SetPoint("TOPLEFT", 16, -16)
-  text:SetText("Cassette: Spotify in a compact player.")
+  text:SetText("Cassette: your music in a compact player.")
   local open = UI.Button(panel, "Open Cassette options", 160, function()
     if SettingsPanel then HideUIPanel(SettingsPanel) end
     JB:ToggleOptions()

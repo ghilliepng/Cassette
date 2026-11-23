@@ -9,7 +9,7 @@
 local ADDON, JB = ...
 _G.Cassette = JB
 
-JB.version = "0.1.1"
+JB.version = "0.2.0"
 JB.MEDIA = "Interface\\AddOns\\Cassette\\Media\\"
 JB.startTime = GetTime()
 
@@ -42,8 +42,69 @@ local DEFAULTS = {
   duckLevel = 30,     -- % of your volume during the dip
   duckHold = 2,       -- seconds of quiet before the music comes back up
   setupDone = false,  -- the first-setup window has been finished once
+  musicApp = "spotify", -- the app the player follows: a JB.MUSIC_APPS key
 }
 JB.DEFAULTS = DEFAULTS
+
+--------------------------------------------------------------------------------
+-- The music app the player follows (the app on the PC: players.py). Playlists, liked songs
+-- and search (the browser) are Spotify's only.
+--------------------------------------------------------------------------------
+
+JB.MUSIC_APPS = {
+  { "spotify", "Spotify" }, { "youtube", "YouTube Music" }, { "apple", "Apple Music" },
+}
+JB.FOLLOWS_OTHERS = 2 * 32   -- the first app on the PC that can follow others: 0.2.0 (updates.py's code)
+
+function JB:MusicApp()
+  local key = self.db and self.db.musicApp
+  for _, a in ipairs(self.MUSIC_APPS) do
+    if a[1] == key then return a[1], a[2] end
+  end
+  return "spotify", "Spotify"
+end
+
+function JB:MusicName()
+  local _, name = self:MusicApp()
+  return name
+end
+
+function JB:IsSpotify()
+  return self:MusicApp() == "spotify"
+end
+
+-- YouTube Music plays in a browser or a browser-based app, and those never take shuffle from
+-- other programs.
+function JB:CanShuffle()
+  return self:MusicApp() ~= "youtube"
+end
+
+-- false when the app on the PC is too old to follow anything but Spotify
+function JB:AppFollowsMusicApp()
+  local s = self.state
+  if self:IsSpotify() then return true end
+  if s.appOld then return false end
+  return not s.appCode or s.appCode >= self.FOLLOWS_OTHERS
+end
+
+-- Tell the app on the PC which music app to follow. It remembers, so this is only sent when
+-- the choice changes, and once on connecting if it was ever changed (a message is a flash).
+function JB:SendMusicApp(quiet)
+  local key = self:MusicApp()
+  if quiet then self:Send("MUSIC", key) else self:Command("MUSIC", key) end
+end
+
+function JB:SetMusicApp(key)
+  if key == self:MusicApp() then return end
+  self.db.musicApp, self.db.musicAppChanged = key, true
+  self:SendMusicApp()
+  self:RefreshWidget()
+  if key == "spotify" and self.browser and self.browser:IsShown() and not self.view and self.BrowserCommand then
+    self:BrowserCommand("BR", "P", 0)
+  end
+  if self.RefreshBrowser then self:RefreshBrowser() end
+  if self.RefreshOptionsStatus then self:RefreshOptionsStatus() end
+end
 
 function JB:Print(msg)
   print("|cff1ed760Cassette|r " .. msg)
@@ -243,9 +304,9 @@ SlashCmdList.CASSETTE = function(input)
     end
   elseif cmd == "status" then
     local s = JB.state
-    JB:Print(("session %d, mail %d/%d, record %d/%d, art %d/%d; %s, Spotify %s"):format(
+    JB:Print(("session %d, mail %d/%d, record %d/%d, art %d/%d; %s, %s %s"):format(
       JB.nonce, JB.mailCursor, JB.MAIL, JB.nextRecord, JB.RECORDS, JB.nextArt, JB.ART,
-      s.connected and "companion answering" or "companion not answering",
+      s.connected and "companion answering" or "companion not answering", JB:MusicName(),
       s.available and (s.playing and "playing" or "paused") or "not open"))
     local st = JB.stats
     if st then
