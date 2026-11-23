@@ -24,6 +24,10 @@ Made for **WoW Forever**. Windows only.
 - **Keeps itself up to date:** when there's a new version of the app, the game and the tray say
   so, and one click installs it.
 
+## Planned features
+
+- **Other music apps:** support for more than Spotify, such as YouTube Music and Apple Music.
+
 ## How it works (and why there's an app)
 
 WoW addons can't talk to other programs, so Cassette comes in two parts:

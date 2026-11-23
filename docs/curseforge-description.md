@@ -14,6 +14,10 @@ live progress bar and the controls, right in your UI.
 - **Highly customisable:** five layouts, three themes (Classic, Modern, EllesmereUI), any accent
   colour (including your class colour), plus adjustable size and background opacity.
 
+## Planned features
+
+- **Other music apps:** support for more than Spotify, such as YouTube Music and Apple Music.
+
 ## You also need the Cassette app (Windows)
 
 WoW addons can't talk to Spotify on their own, so Cassette comes with a small app that runs in
