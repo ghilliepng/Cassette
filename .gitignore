@@ -6,3 +6,5 @@ build/
 # files the app writes into the game's addon folder at run time
 addon/Cassette/live/
 *.tmp
+.changelog.md
+.release/

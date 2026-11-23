@@ -6,6 +6,7 @@
 ## IconTexture: Interface\AddOns\Cassette\Media\icon
 ## OptionalDeps: Spoken, EllesmereUI
 ## AddonCompartmentFunc: Cassette_OnAddonCompartmentClick
+## X-Curse-Project-ID: 1825548
 
 Core.lua
 Strip.lua

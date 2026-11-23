@@ -1,6 +1,11 @@
-# For the BigWigs packager (CurseForge, Wago and GitHub releases from a git tag).
+# For the BigWigs packager, run by .github/workflows/curseforge.yml when a release is published.
 # The addon lives in addon/Cassette; everything else in the repository is the app and tools.
 package-as: Cassette
+
+# The workflow writes this from the release's "What's new" (it isn't in the repository).
+manual-changelog:
+  filename: .changelog.md
+  markup-type: markdown
 
 move-folders:
   Cassette/addon/Cassette: Cassette

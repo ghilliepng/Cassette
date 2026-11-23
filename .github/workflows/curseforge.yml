@@ -1,0 +1,55 @@
+# Uploads the addon to CurseForge when a release is published on GitHub.
+# Running it by hand (Actions tab > CurseForge > Run workflow) only builds the zip, to check it.
+name: CurseForge
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  addon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the packager reads the tags for the version
+
+      - name: Check the TOC version matches the release
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          toc=$(sed -n 's/^## Version:[[:space:]]*//p' addon/Cassette/Cassette.toc | tr -d '\r[:space:]')
+          if [ "$toc" != "${TAG#v}" ]; then
+            echo "::error::Cassette.toc says version $toc but the release is $TAG"
+            exit 1
+          fi
+
+      - name: Changelog from the release's "What's new"
+        if: github.event_name == 'release'
+        env:
+          NOTES: ${{ github.event.release.body }}
+          URL: ${{ github.event.release.html_url }}
+        run: |
+          printf '%s\n' "$NOTES" | tr -d '\r' \
+            | awk '/^#+ What.*s new/ { on = 1; next } on && /^#+ / { exit } on' > .changelog.md
+          if ! grep -q '[^[:space:]]' .changelog.md; then
+            printf 'See the release notes: %s\n' "$URL" > .changelog.md
+          fi
+          cat .changelog.md
+
+      - name: Package (and upload, for a release)
+        uses: BigWigsMods/packager@v2
+        with:
+          args: ${{ github.event_name != 'release' && '-d' || '' }} # -d: build only, no upload
+        env:
+          CF_API_KEY: ${{ github.event_name == 'release' && secrets.CF_API_KEY || '' }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: addon-zip
+          path: .release/*.zip
