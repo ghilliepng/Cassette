@@ -1,5 +1,7 @@
 [![Donate](https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/ghilliepng)
 
+<p align="center"><img src="docs/logo.png" width="140" alt="Cassette logo"></p>
+
 # Cassette
 
 **Control Spotify from inside World of Warcraft.** A compact player with the song that's

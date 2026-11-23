@@ -2,8 +2,10 @@
 (Spotify requires one per player) and signing in. Everything that has to be typed has a Copy
 button, and the Client ID is picked up from the clipboard the moment the player copies it.
 """
+import os
 import queue
 import re
+import sys
 import threading
 import tkinter as tk
 import webbrowser
@@ -41,6 +43,12 @@ class SetupWindow:
         self.root = tk.Tk()
         r = self.root
         r.title("Cassette - Connect Spotify")
+        try:  # Cassette's logo as the window's icon
+            base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+            self.logo = tk.PhotoImage(file=os.path.join(base, "logo.png"))
+            r.iconphoto(True, self.logo)
+        except Exception:
+            pass
         r.configure(bg=BG)
         r.resizable(False, False)
         r.attributes("-topmost", True)  # over a borderless game window

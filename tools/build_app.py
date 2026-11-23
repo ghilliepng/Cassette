@@ -31,17 +31,10 @@ def _setting(name):
 
 
 def make_icon(path):
-    """The app's icon: the addon's icon on a dark round tile, at the sizes Windows uses."""
-    from PIL import Image, ImageDraw
-    size = 256
-    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.ellipse((8, 8, size - 8, size - 8), fill=(24, 24, 28, 255), outline=(30, 215, 96, 255), width=10)
-    art = os.path.join(ADDON, _setting("ADDON"), "Media", "icon.tga")
-    if os.path.exists(art):
-        glyph = Image.open(art).convert("RGBA").resize((150, 150), Image.Resampling.LANCZOS)
-        im.alpha_composite(glyph, ((size - 150) // 2, (size - 150) // 2))
-    im.save(path, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    """The app's icon: Cassette's logo (tools/make_logo.py), at the sizes Windows uses."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import make_logo
+    make_logo.icon_file(path)
 
 
 def stage_addon(stage):
@@ -59,6 +52,7 @@ def pyinstaller(name, icon, addon_stage):
                     "--distpath", os.path.join(BUILD, "dist"), "--workpath", os.path.join(BUILD, "work"),
                     "--specpath", BUILD, "--paths", COMPANION,
                     "--add-data", f"{addon_stage}{os.pathsep}addon",
+                    "--add-data", f"{os.path.join(COMPANION, 'logo.png')}{os.pathsep}.",
                     "--collect-submodules", "winrt", "--collect-submodules", "pycaw",
                     "--hidden-import", "pystray._win32",
                     MAIN], check=True, cwd=ROOT)

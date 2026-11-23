@@ -120,7 +120,7 @@ def icon():
 def main():
     os.makedirs(OUT, exist_ok=True)
     for name, im in [("play", play()), ("pause", pause()), ("next", skip(True)), ("prev", skip(False)),
-                     ("minus", minus()), ("plus", plus()), ("icon", icon()), ("list", listing()),
+                     ("minus", minus()), ("plus", plus()), ("list", listing()),
                      ("close", close()), ("left", chevron(False)), ("right", chevron(True)),
                      ("shuffle", shuffle()), ("check", check()), ("dot", dot())]:
         save(name, im)

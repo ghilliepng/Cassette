@@ -441,12 +441,11 @@ class Companion:
         import pystray
         from PIL import Image, ImageDraw
 
-        im = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-        d = ImageDraw.Draw(im)
-        d.rounded_rectangle((2, 2, 62, 62), 14, fill=(30, 215, 96, 255))
-        d.ellipse((14, 38, 30, 52), fill=(20, 20, 24, 255))
-        d.rectangle((26, 14, 30, 46), fill=(20, 20, 24, 255))
-        d.polygon([(26, 14), (48, 9), (48, 18), (30, 23)], fill=(20, 20, 24, 255))
+        try:  # Cassette's logo (tools/make_logo.py), carried with the app
+            im = Image.open(os.path.join(getattr(sys, "_MEIPASS", HERE), "logo.png")).convert("RGBA")
+        except OSError:
+            im = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+            ImageDraw.Draw(im).rounded_rectangle((2, 2, 62, 62), 14, fill=(30, 215, 96, 255))
 
         def toggle_autostart(icon, item):
             set_autostart(not autostart_on())
