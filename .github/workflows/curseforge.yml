@@ -29,6 +29,17 @@ jobs:
             exit 1
           fi
 
+      - name: Check the CurseForge key is set
+        if: github.event_name == 'release'
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+        run: |
+          # Without it the packager skips the upload and the run still looks fine.
+          if [ -z "$CF_API_KEY" ]; then
+            echo "::error::Add the CF_API_KEY secret (Settings > Secrets and variables > Actions), then re-run this job"
+            exit 1
+          fi
+
       - name: Changelog from the release's "What's new"
         if: github.event_name == 'release'
         env:
