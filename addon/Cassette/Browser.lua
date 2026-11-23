@@ -127,6 +127,7 @@ function JB:CreateBrowser()
   box.hint:SetPoint("LEFT", 6, 0)
   box.hint:SetPoint("RIGHT", -20, 0)   -- inside the box, clear of the clear button
   box.hint:SetWordWrap(false)          -- (cut short rather than spill out, in wider fonts)
+  box.hint:SetJustifyH("LEFT")         -- where your typing starts
   box.hint:SetText("Songs, albums, artists")
   UI.Role(box.hint, "faint")
   box.clear = UI.Icon(box, "close", 10, function()
