@@ -11,8 +11,6 @@ NPC dialogue.
 
 Made for **WoW Forever**. Windows only.
 
-<p align="center"><img src="docs/screenshots/card.png" width="300" alt="The Cassette player in its card layout"></p>
-
 ## Features
 
 - **The player:** song, artist and cover, updated the moment the song changes, with play/pause,
