@@ -1,0 +1,8 @@
+# the app's environment and build output
+companion/.venv/
+__pycache__/
+*.pyc
+build/
+# files the app writes into the game's addon folder at run time
+addon/Cassette/live/
+*.tmp

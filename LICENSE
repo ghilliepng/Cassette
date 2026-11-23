@@ -1,0 +1,28 @@
+Cassette
+Copyright (C) 2026 ghilliepng. All rights reserved.
+
+Cassette's source code is published so that anyone can see exactly what it does. Publishing it
+does not give you permission to use it beyond what this notice allows.
+
+You may:
+  - read the source code, and fork this repository on GitHub as GitHub's Terms of Service allow;
+  - download the official releases of Cassette (from this repository, CurseForge or Wago) and use
+    them for your own personal, non-commercial use;
+  - build Cassette from this source for your own personal, non-commercial use, including with
+    modified versions of the third-party components it includes, as those components' own
+    licences allow (see THIRD-PARTY-NOTICES.md).
+
+You may not, without the copyright holder's written permission:
+  - copy, modify, merge, publish, distribute or sublicense Cassette or any part of it;
+  - upload Cassette, or a modified version of it, to CurseForge, Wago, WoWInterface or any other
+    site or service;
+  - sell Cassette, charge for access to it, or use it in anything you make money from.
+
+The third-party components included with the Cassette app keep their own licences, which this
+notice does not change; see THIRD-PARTY-NOTICES.md.
+
+CASSETTE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH CASSETTE OR THE USE OR OTHER DEALINGS IN IT.

@@ -1,0 +1,6 @@
+## Interface: 16001
+## Title: Cassette Test
+## Notes: Throwaway test for Cassette: can WoW show a picture that changes on disk without a /reload? Type /jbtest.
+## Version: 0.1
+
+CassetteTest.lua

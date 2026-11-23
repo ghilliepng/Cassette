@@ -1,0 +1,16 @@
+# For the BigWigs packager (CurseForge, Wago and GitHub releases from a git tag).
+# The addon lives in addon/Cassette; everything else in the repository is the app and tools.
+package-as: Cassette
+
+move-folders:
+  Cassette/addon/Cassette: Cassette
+
+ignore:
+  - companion
+  - tools
+  - installer
+  - test
+  - build
+  - docs
+  - .github
+  - "*.md"

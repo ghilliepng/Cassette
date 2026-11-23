@@ -1,0 +1,18 @@
+## Interface: 16001
+## Title: Cassette
+## Notes: Control Spotify from inside WoW: a compact player with the song, its cover and controls, live. Needs the Cassette app on your PC.
+## Version: 0.1.0
+## SavedVariables: CassetteDB
+## IconTexture: Interface\AddOns\Cassette\Media\icon
+## OptionalDeps: Spoken, EllesmereUI
+## AddonCompartmentFunc: Cassette_OnAddonCompartmentClick
+
+Core.lua
+Strip.lua
+Live.lua
+Duck.lua
+Widget.lua
+Browser.lua
+UI.lua
+Options.lua
+Setup.lua
