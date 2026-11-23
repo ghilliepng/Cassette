@@ -427,7 +427,7 @@ end
 function JB:RefreshWidget()
   local f, s = self.widget, self.state
   if not f then return end
-  f:SetShown(self.db.shown)
+  f:SetShown(self.db.shown and not self.playerOutOfShot)   -- (the showcase's window pictures)
   local shows = f.layoutShows or {}
   local line1, line2 = statusText(s)
   f.statusShown = line1 ~= nil

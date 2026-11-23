@@ -218,10 +218,10 @@ local function shotRect(frames)
   return x, y, math.floor((r - l) * k) + 2 * pad, math.floor((t - b) * k) + 2 * pad
 end
 
--- Alt+Z hides the interface (UIParent) and everything on it. While the showcase runs, Cassette's
--- frames sit on a holder of their own instead, at the same scale, so they stay on screen and the
--- pictures show only Cassette and the world behind it. Afterwards they go back on UIParent, and
--- hide with the rest of the interface again.
+-- The rest of the interface hides for the pictures, as Alt+Z does (UIParent and everything on
+-- it; Alt+Z itself can belong to another program, like NVIDIA's overlay). Cassette's frames sit
+-- on a holder of their own meanwhile, at the same scale, so they stay on screen and the pictures
+-- show only Cassette and the world behind it. Afterwards everything goes back.
 local lifted = {}
 local function liftFrames(frames)
   local holder = _G.CassetteShowcase or CreateFrame("Frame", "CassetteShowcase", nil)
@@ -248,20 +248,67 @@ local function dropFrames()
   if _G.CassetteShowcase then _G.CassetteShowcase:Hide() end
 end
 
+local function inCombat() return InCombatLockdown and InCombatLockdown() end
+local hidUI = false
+local function hideInterface()
+  if inCombat() or not UIParent:IsShown() then return end
+  if SetUIVisibility then pcall(SetUIVisibility, false) end
+  if UIParent:IsShown() then pcall(UIParent.Hide, UIParent) end
+  hidUI = not UIParent:IsShown()
+end
+local function showInterface()
+  if not hidUI then return end
+  if inCombat() then   -- the game doesn't allow it in combat: as soon as that ends
+    C_Timer.After(1, showInterface)
+    return
+  end
+  if SetUIVisibility then pcall(SetUIVisibility, true) end
+  if not UIParent:IsShown() then pcall(UIParent.Show, UIParent) end
+  hidUI = false
+end
+
 function JB:Showcase(search)
   if self.showcasing then return end
   if not self.state.connected then
     self:Print("start the Cassette app first: it saves the pictures.")
     return
   end
+  if inCombat() then
+    self:Print("showcase: not in combat.")
+    return
+  end
   self.showcasing = true
   local db = self.db
-  local saved = { theme = db.theme, layout = db.layout, point = db.point, scale = db.scale, shown = db.shown }
+  local saved = { theme = db.theme, layout = db.layout, point = db.point, scale = db.scale, shown = db.shown,
+    accent = db.accent }
   local mine = self:ThemeKey()
   local function look(theme, layout)
-    db.theme, db.layout, db.shown, db.scale = theme, layout, true, 1.15
-    db.point = { "CENTER", "UIParent", "CENTER", 0, -120 }
+    db.theme, db.layout, db.shown, db.scale, db.accent = theme, layout, true, 1.15, "spotify"
+    db.point = { "TOPLEFT", "UIParent", "TOPLEFT", 60, -100 }   -- up and to the left, clear of your character
     self:ApplyLook()
+  end
+  -- the windows go there too, and back to where they were afterwards
+  local moved = {}
+  local function place(f)
+    if not f then return end
+    if not moved[f] then
+      local pts = {}
+      for n = 1, (f.GetNumPoints and f:GetNumPoints() or 0) do pts[n] = { f:GetPoint(n) } end
+      moved[f] = pts
+    end
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 60, -60)
+  end
+  local function putBack()
+    for f, pts in pairs(moved) do
+      f:ClearAllPoints()
+      if #pts == 0 then f:SetPoint("CENTER") end
+      for _, pt in ipairs(pts) do f:SetPoint(unpack(pt)) end
+    end
+  end
+  local function hidePlayer()   -- (the options still show the real "Show the player")
+    self.playerOutOfShot = true
+    self:RefreshWidget()
   end
   local function hideWindows()
     if self.browser then self.browser:Hide() end
@@ -281,41 +328,65 @@ function JB:Showcase(search)
     self:OpenTab(3, "L")
   end, function() return { self.widget, self.browser } end }
   if search then
-    steps[#steps + 1] = { "browser-search", function() self:BrowserCommand("FD", search, 0) end,
+    steps[#steps + 1] = { "browser-search", function()
+      if self.browser and self.browser.search then self.browser.search:SetText(search) end
+      self:BrowserCommand("FD", search, 0)
+    end,
       function() return { self.widget, self.browser } end }
   end
   steps[#steps + 1] = { "options", function()
     hideWindows()
+    hidePlayer()
     if not (self.options and self.options:IsShown()) then self:ToggleOptions() end
+    place(self.options)
   end, function() return { self.options } end }
-  steps[#steps + 1] = { "setup", function() hideWindows() self:ShowSetup() end, function() return { self.setup } end }
+  steps[#steps + 1] = { "setup", function() hideWindows() hidePlayer() self:ShowSetup() place(self.setup) end,
+    function() return { self.setup } end }
 
   local function lift() liftFrames({ self.widget, self.browser, self.options, self.setup }) end
+  -- Everything back as it was. Safe to call twice: also run by a watchdog, so a failed step can't
+  -- leave the interface hidden.
+  local done = false
+  local function finish()
+    if done then return end
+    done = true
+    pcall(hideWindows)
+    db.theme, db.layout, db.point, db.scale, db.shown = saved.theme, saved.layout, saved.point, saved.scale, saved.shown
+    db.accent = saved.accent
+    self.playerOutOfShot = nil
+    if self.browser and self.browser.search then pcall(self.browser.search.SetText, self.browser.search, "") end
+    pcall(self.ApplyLook, self)
+    pcall(putBack)
+    dropFrames()
+    showInterface()
+    self.showcasing = nil
+    self:Print("showcase done: the pictures are in the app's folder (%LOCALAPPDATA%\Cassette\showcase).")
+  end
   lift()
-  self:Print(("showcase: %d pictures, about %d seconds. Press Alt+Z now to hide the rest of your interface: "
-    .. "Cassette stays on screen until it's done, then hides with the rest, and Alt+Z brings it all back. "
-    .. "Keep WoW in front and the mouse away from Cassette."):format(#steps, #steps * 4 + 3))
+  self:Print(("showcase: %d pictures, about %d seconds. Your interface hides meanwhile, and comes back at the "
+    .. "end. Keep WoW in front and the mouse away from Cassette."):format(#steps, #steps * 5 + 3))
   local i = 0
   local function nextStep()
+    if done then return end
     i = i + 1
     local step = steps[i]
-    if not step then
-      hideWindows()
-      db.theme, db.layout, db.point, db.scale, db.shown = saved.theme, saved.layout, saved.point, saved.scale, saved.shown
-      self:ApplyLook()
-      dropFrames()
-      self.showcasing = nil
-      self:Print("showcase done: the pictures are in the app's folder (%LOCALAPPDATA%\Cassette\showcase).")
-      return
-    end
+    if not step then return finish() end
     local ok, err = pcall(step[2])
     if not ok then self:Print("showcase: " .. tostring(err)) end
     lift()   -- the browser and the windows are made the first time they open
-    C_Timer.After(3, function()   -- the cover and song pictures redraw for the new look first
-      local x, y, w, h = shotRect(step[3]())
-      if x then self:Send("SHOT", ("%s %d %d %d %d"):format(step[1], x, y, w, h)) end
+    self:PollFast(4)   -- the cover and song pictures are redrawn for the new look: read them soon
+    C_Timer.After(4, function()
+      local shot, why = pcall(function()
+        local x, y, w, h = shotRect(step[3]())
+        if x then self:Send("SHOT", ("%s %d %d %d %d"):format(step[1], x, y, w, h)) end
+      end)
+      if not shot then self:Print("showcase: " .. tostring(why)) end
       C_Timer.After(1, nextStep)
     end)
   end
-  C_Timer.After(3, nextStep)   -- time to press Alt+Z
+  C_Timer.After(3, function()   -- time to read the message first
+    hideInterface()
+    nextStep()
+  end)
+  C_Timer.After(#steps * 5 + 20, finish)   -- the watchdog
 end

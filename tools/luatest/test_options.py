@@ -89,15 +89,18 @@ steps = [
      'FILES["app_0"], FILES["app_1"] = { 0, 0 }, { 0, 0 }; Cassette.state.appVersion = nil; Cassette:ReadAppInfo(1); _mock_update(30); '
      'assert(Cassette.state.appOld); assert(printed[#printed]:find("out of date") and printed[#printed]:find("releases/latest"), printed[#printed]); '
      'assert(Cassette.options.spotifyStatus.text:find("out of date")); Cassette.options:Hide()'),
-    ("showcase: Cassette moves off the interface, so Alt+Z leaves it on screen",
-     'Cassette.state.connected = true; Cassette:Showcase(); assert(Cassette.widget:GetParent() == CassetteShowcase); '
-     '_mock_update(3.5); assert(Cassette.widget:GetParent() == CassetteShowcase)'),
+    ("showcase: Cassette moves off the interface, which then hides (no Alt+Z needed)",
+     'CassetteDB.accent = "class"; Cassette.state.connected = true; Cassette:Showcase(); assert(Cassette.widget:GetParent() == CassetteShowcase); '
+     'assert(UIParent.shown); _mock_update(3.5); assert(Cassette.widget:GetParent() == CassetteShowcase); assert(not UIParent.shown); '
+     'assert(CassetteDB.accent == "spotify")'),
     ("...the browser and the windows too, once they open",
-     '_mock_update(34); assert(Cassette.browser:GetParent() == CassetteShowcase and Cassette.options:GetParent() == CassetteShowcase)'),
-    ("...a picture for every step, then all back on the interface, which Alt+Z hides again",
-     '_mock_update(10); assert(not Cassette.showcasing); local n = 0; for _, m in ipairs(sent) do if m:match("^SHOT ") then n = n + 1 end end; '
+     '_mock_update(44); assert(Cassette.browser:GetParent() == CassetteShowcase and Cassette.options:GetParent() == CassetteShowcase); '
+     'assert(not Cassette.widget.shown, "the player shows behind the options"); assert(CassetteDB.shown, "Show the player looks unticked")'),
+    ("...a picture for every step, then all back on the interface, which shows again",
+     '_mock_update(10); assert(not Cassette.showcasing); assert(Cassette.widget.shown and CassetteDB.accent == "class", CassetteDB.accent); local n = 0; for _, m in ipairs(sent) do if m:match("^SHOT ") then n = n + 1 end end; '
      'assert(n >= 9, n); for _, fr in ipairs({ Cassette.widget, Cassette.browser, Cassette.options, Cassette.setup }) do '
-     'assert(fr:GetParent() == UIParent) end; assert(not CassetteShowcase.shown)'),
+     'assert(fr:GetParent() == UIParent) end; assert(not CassetteShowcase.shown); assert(UIParent.shown)'),
+    ("...and the watchdog later changes nothing", '_mock_update(30); assert(UIParent.shown and Cassette.widget:GetParent() == UIParent)'),
     ("reset puts the bar back", 'CassetteDB.scale = 1.7; SlashCmdList.CASSETTE("reset"); assert(CassetteDB.scale == 1)'),
 ]
 ok = True
