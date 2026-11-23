@@ -487,6 +487,15 @@ class Companion:
                 log(f"couldn't end the music dip: {e}")
             icon.stop()
 
+        # the installed app's uninstaller (Inno Setup puts it beside the app)
+        uninstaller = os.path.join(os.path.dirname(sys.executable), "unins000.exe")
+
+        def uninstall(icon, item):
+            log("uninstall from the tray")
+            import subprocess
+            subprocess.Popen([uninstaller], close_fds=True)
+            quit_(icon, item)  # out of the way, so nothing is in use while it's removed
+
         def spotify_item(item):
             if self.web.signed_in():
                 return f"Spotify: {self.web.user or 'connected'}..."
@@ -498,6 +507,8 @@ class Companion:
             pystray.MenuItem(spotify_item, lambda icon, item: self.open_setup()),
             pystray.MenuItem("Start with Windows", toggle_autostart, checked=lambda item: autostart_on()),
             pystray.MenuItem("Open log", open_log),
+            pystray.MenuItem("Uninstall Cassette...", uninstall,
+                             visible=getattr(sys, "frozen", False) and os.path.exists(uninstaller)),
             pystray.MenuItem("Quit", quit_),
         )
         self.icon = pystray.Icon("Cassette", im, "Cassette", menu)

@@ -53,3 +53,45 @@ Filename: "{app}\{#AppName}.exe"; Description: "Start {#AppName} now"; Flags: no
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+
+[Code]
+// Uninstalling: offer to tidy up what the app made outside its own folder. Two questions, both
+// optional, skipped in a silent uninstall:
+//   - its settings and Spotify sign-in (%LOCALAPPDATA%\Cassette)
+//   - the Cassette addon in World of Warcraft, at the folder the app recorded in its settings,
+//     and only if that folder really is named Cassette
+
+// The addon's folder from the app's settings (config.json, "addon_dir"), or '' if unknown.
+function AddonDirFromConfig(ConfigFile: String): String;
+var
+  Raw: AnsiString;
+  Text, Key: String;
+  P: Integer;
+begin
+  Result := '';
+  if not LoadStringFromFile(ConfigFile, Raw) then Exit;
+  Text := String(Raw);
+  Key := '"addon_dir": "';
+  P := Pos(Key, Text);
+  if P = 0 then Exit;
+  Text := Copy(Text, P + Length(Key), MaxInt);
+  P := Pos('"', Text);
+  if P = 0 then Exit;
+  Result := Copy(Text, 1, P - 1);
+  StringChangeEx(Result, '\', '\', True);
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  DataDir, AddonDir: String;
+begin
+  if (CurUninstallStep <> usPostUninstall) or UninstallSilent then Exit;
+  DataDir := ExpandConstant('{localappdata}\{#AppName}');
+  AddonDir := RemoveBackslash(AddonDirFromConfig(DataDir + '\config.json'));
+  if DirExists(DataDir) and (MsgBox('Also remove your {#AppName} settings and Spotify sign-in from this PC?' + #13#10#13#10 +
+      'Choose No to keep them, so a reinstall picks up where you left off.', mbConfirmation, MB_YESNO) = IDYES) then
+    DelTree(DataDir, True, True, True);
+  if (AddonDir <> '') and DirExists(AddonDir) and (CompareText(ExtractFileName(AddonDir), '{#AppName}') = 0) and
+     (MsgBox('Also remove the {#AppName} addon from World of Warcraft?' + #13#10#13#10 + AddonDir, mbConfirmation, MB_YESNO) = IDYES) then
+    DelTree(AddonDir, True, True, True);
+end;
