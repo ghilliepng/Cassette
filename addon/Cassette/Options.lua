@@ -180,3 +180,95 @@ ev:SetScript("OnEvent", function()
     Settings.RegisterAddOnCategory(category)
   end)
 end)
+
+--------------------------------------------------------------------------------
+-- Showcase (/cassette showcase [search]): for the download pages' screenshots. Steps through
+-- each theme and layout, the browser, the options and the setup window; at each, asks the app
+-- (SHOT) to save a picture of just that part of the screen. Puts everything back afterwards.
+--------------------------------------------------------------------------------
+
+-- The screen rectangle (pixels from the top-left) around some frames, with a margin.
+local function shotRect(frames)
+  local _, ph = GetPhysicalScreenSize()
+  local k = ph / 768
+  local l, b, r, t
+  for _, fr in ipairs(frames) do
+    if fr and fr:IsShown() and fr:GetLeft() then
+      local s = fr:GetEffectiveScale()
+      local fl, fb, fr2, ft = fr:GetLeft() * s, fr:GetBottom() * s, fr:GetRight() * s, fr:GetTop() * s
+      l, b = math.min(l or fl, fl), math.min(b or fb, fb)
+      r, t = math.max(r or fr2, fr2), math.max(t or ft, ft)
+    end
+  end
+  if not l then return nil end
+  local pad = 24
+  local x, y = math.max(0, math.floor(l * k) - pad), math.max(0, math.floor(ph - t * k) - pad)
+  return x, y, math.floor((r - l) * k) + 2 * pad, math.floor((t - b) * k) + 2 * pad
+end
+
+function JB:Showcase(search)
+  if self.showcasing then return end
+  if not self.state.connected then
+    self:Print("start the Cassette app first: it saves the pictures.")
+    return
+  end
+  self.showcasing = true
+  local db = self.db
+  local saved = { theme = db.theme, layout = db.layout, point = db.point, scale = db.scale, shown = db.shown }
+  local mine = self:ThemeKey()
+  local function look(theme, layout)
+    db.theme, db.layout, db.shown, db.scale = theme, layout, true, 1.15
+    db.point = { "CENTER", "UIParent", "CENTER", 0, -120 }
+    self:ApplyLook()
+  end
+  local function hideWindows()
+    if self.browser then self.browser:Hide() end
+    if self.options then self.options:Hide() end
+    if self.setup then self.setup:Hide() end
+  end
+  local steps = {}
+  for _, theme in ipairs(UI.THEME_ORDER) do
+    steps[#steps + 1] = { "theme-" .. theme, function() hideWindows() look(theme, "bar") end, function() return { self.widget } end }
+  end
+  for _, layout in ipairs({ "stackedBelow", "stackedAbove", "slim", "card" }) do
+    steps[#steps + 1] = { "layout-" .. layout, function() look(mine, layout) end, function() return { self.widget } end }
+  end
+  steps[#steps + 1] = { "browser-liked", function()
+    look(mine, "bar")
+    if not (self.browser and self.browser:IsShown()) then self:ToggleBrowser() end
+    self:OpenTab(3, "L")
+  end, function() return { self.widget, self.browser } end }
+  if search then
+    steps[#steps + 1] = { "browser-search", function() self:BrowserCommand("FD", search, 0) end,
+      function() return { self.widget, self.browser } end }
+  end
+  steps[#steps + 1] = { "options", function()
+    hideWindows()
+    if not (self.options and self.options:IsShown()) then self:ToggleOptions() end
+  end, function() return { self.options } end }
+  steps[#steps + 1] = { "setup", function() hideWindows() self:ShowSetup() end, function() return { self.setup } end }
+
+  self:Print(("showcase: %d pictures, about %d seconds. Keep WoW in front and the mouse away from Cassette.")
+    :format(#steps, #steps * 4))
+  local i = 0
+  local function nextStep()
+    i = i + 1
+    local step = steps[i]
+    if not step then
+      hideWindows()
+      db.theme, db.layout, db.point, db.scale, db.shown = saved.theme, saved.layout, saved.point, saved.scale, saved.shown
+      self:ApplyLook()
+      self.showcasing = nil
+      self:Print("showcase done: the pictures are in the app's folder (%LOCALAPPDATA%\Cassette\showcase).")
+      return
+    end
+    local ok, err = pcall(step[2])
+    if not ok then self:Print("showcase: " .. tostring(err)) end
+    C_Timer.After(3, function()   -- the cover and song pictures redraw for the new look first
+      local x, y, w, h = shotRect(step[3]())
+      if x then self:Send("SHOT", ("%s %d %d %d %d"):format(step[1], x, y, w, h)) end
+      C_Timer.After(1, nextStep)
+    end)
+  end
+  nextStep()
+end

@@ -55,9 +55,10 @@ def wow_window():
     return None
 
 
-def grab(hwnd, w, h):
-    """The top-left w x h pixels of the window's client area, as top-down BGRA bytes."""
-    pt = wintypes.POINT(0, 0)
+def grab(hwnd, w, h, x=0, y=0):
+    """w x h pixels of the window's client area from (x, y) (top-left by default), as top-down
+    BGRA bytes."""
+    pt = wintypes.POINT(x, y)
     _u.ClientToScreen(hwnd, ctypes.byref(pt))
     sdc = _u.GetDC(None)
     mdc = _g.CreateCompatibleDC(sdc)

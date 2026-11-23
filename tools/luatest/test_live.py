@@ -85,16 +85,16 @@ steps = [
      'assert(Cassette.list and Cassette.list.kind == 1 and Cassette.list.pages == 3); '
      'local sl = Cassette.browser.slots[0]; assert(sl.rows[8].shown and sl.rows[3].play.shown); '
      'assert(Cassette.state.account); assert(count("PG 2 1") == 1, "page 2 not asked for")'),
-    ("clicking one of your playlists opens it", 'Cassette.browser.slots[0].rows[3].scripts.OnClick(); assert(last() == "OP 2 2", last())'),
-    ("its play button plays it (shuffle off: in order)", 'Cassette.state.shuffle = false; Cassette.browser.slots[0].rows[2].play.scripts.OnClick(); assert(last() == "PL 2 1", last())'),
+    ("clicking one of your playlists opens it", 'Cassette.browser.slots[0].rows[3].scripts.OnClick(); assert(last() == "OP 2 2 1", last())'),
+    ("its play button plays it (shuffle off: in order)", 'Cassette.state.shuffle = false; Cassette.browser.slots[0].rows[2].play.scripts.OnClick(); assert(last() == "PL 2 1 1", last())'),
     ("the shuffle toggle: on, and play now plays shuffled",
      'Cassette.browser.shuffle.scripts.OnClick(); assert(last() == "S" and Cassette.state.shuffle); '
-     'Cassette.browser.slots[0].rows[2].play.scripts.OnClick(); assert(last() == "PS 2 1", last()); '
+     'Cassette.browser.slots[0].rows[2].play.scripts.OnClick(); assert(last() == "PS 2 1 1", last()); '
      'Cassette.browser.shuffle.scripts.OnClick(); assert(not Cassette.state.shuffle)'),
     ("page 2 arrives below page 1, its rows click as rows 8 on",
      'Cassette.expectNew = false; view(3, 1, 1, 3, 8); record(13, 6, 150, 0, PLAYING + ACCOUNT, 3); mail(Cassette.mailCursor, 5000, 13); wait(4); '
      'assert(Cassette.list.pics[1] and Cassette.list.pics[0], "page 2 didn\'t join the list"); '
-     'Cassette.browser.slots[1].rows[1].scripts.OnClick(); assert(last() == "OP 3 8", last())'),
+     'Cassette.browser.slots[1].rows[1].scripts.OnClick(); assert(last() == "OP 3 8 1", last())'),
     ("scrolling down glides, and asks for page 3 as it nears",
      'Cassette.browser.scripts.OnMouseWheel(Cassette.browser, -1); Cassette.browser.scripts.OnMouseWheel(Cassette.browser, -1); wait(1); '
      'assert(Cassette.list.y > 100, Cassette.list.y); assert(count("PG 3 2") + count("PG 2 2") >= 1, "page 3 not asked for")'),
@@ -104,8 +104,8 @@ steps = [
      'view(4, 2, 0, 1, 5); record(14, 6, 150, 0, PLAYING + ACCOUNT, 4); mail(Cassette.mailCursor, 5000, 14); wait(4); '
      'assert(Cassette.list.kind == 2 and Cassette.browser.back.shown); assert(not Cassette.browser.slots[0].rows[6].shown); '
      'assert(not Cassette.browser.slots[0].rows[1].play.shown and not Cassette.browser.slots[0].rows[2].play.shown); '
-     'Cassette.browser.slots[0].rows[2].scripts.OnClick(); assert(last() == "PL 4 1", last()); '
-     'Cassette.browser.slots[0].rows[1].scripts.OnClick(); assert(last() == "PL 4 0", last())'),
+     'Cassette.browser.slots[0].rows[2].scripts.OnClick(); assert(last() == "PL 4 1 2", last()); '
+     'Cassette.browser.slots[0].rows[1].scripts.OnClick(); assert(last() == "PL 4 0 2", last())'),
     ("Back", 'Cassette.browser.back.scripts.OnClick(); assert(last() == "BK 4", last())'),
     ("a song row darkens while pressed, like the buttons",
      'local r = Cassette.browser.slots[0].rows[3]; r.scripts.OnMouseDown(r); assert(r.press.shown, "no press effect"); '
@@ -114,7 +114,7 @@ steps = [
     ("saved playlists: a click plays (no song list), the note shows",
      'view(5, 7, 0, 1, 4); record(15, 6, 150, 0, PLAYING + ACCOUNT, 5); mail(Cassette.mailCursor, 5000, 15); wait(4); '
      'assert(Cassette.list.kind == 7 and Cassette.browser.note.shown and Cassette.browser.tabSaved.active); '
-     'assert(Cassette.browser.slots[0].rows[4].play.shown); Cassette.browser.slots[0].rows[2].scripts.OnClick(); assert(last() == "PL 5 1", last())'),
+     'assert(Cassette.browser.slots[0].rows[4].play.shown); Cassette.browser.slots[0].rows[2].scripts.OnClick(); assert(last() == "PL 5 1 7", last())'),
     ("two pages published at once are both read, in order",
      'Cassette.expectNew = false; view(6, 7, 0, 1, 4); view(7, 7, 0, 1, 3); record(16, 6, 150, 0, PLAYING + ACCOUNT, 7); mail(Cassette.mailCursor, 5000, 16); wait(4); '
      'assert(Cassette.view.n == 7, "view " .. tostring(Cassette.view.n)); assert(logHas("view 6 shown") == 1, "view 6 skipped")'),

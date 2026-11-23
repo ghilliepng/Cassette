@@ -184,6 +184,8 @@ SlashCmdList.CASSETTE = function(input)
       if JB.setup and JB.setup:IsShown() then JB:RefreshSetup() end
       JB:ShowSetup()
     else JB:Print("restart WoW once to finish installing the setup window.") end
+  elseif cmd == "showcase" then   -- screenshots for the download pages (see Options.lua)
+    if JB.Showcase then JB:Showcase(arg ~= "" and arg or nil) end
   elseif cmd == "lock" or cmd == "unlock" then
     db.locked = cmd == "lock"
     JB:Print(db.locked and "locked in place." or "unlocked: drag it to move it.")

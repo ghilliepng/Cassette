@@ -497,13 +497,13 @@ class Browser:
                 self.views[view] = (lst, 0)
                 self.sent_ahead[which] = lst
 
-    def _page(self, view, page):
-        lst = self._list_of(view)
+    def _page(self, view, page, kind=None):
+        lst = self._list_of(view, kind)
         if lst:
             self._show(lst, page)
 
-    def _open(self, view, row):
-        lst = self._list_of(view)
+    def _open(self, view, row, kind=None):
+        lst = self._list_of(view, kind)
         if lst is None:
             return
         sub = lst.open(row)
@@ -511,8 +511,8 @@ class Browser:
             self.stack.append(sub)
             self._show(sub, 0)
 
-    def _play(self, view, row, shuffle=False):
-        lst = self._list_of(view)
+    def _play(self, view, row, shuffle=False, kind=None):
+        lst = self._list_of(view, kind)
         if lst and lst.kind == KIND_SEARCH:
             sub = lst.open(row)  # an album among the results: show its songs
             if sub:
@@ -543,13 +543,23 @@ class Browser:
         self._show(lst, 0)
 
     # -- publishing a page --
-    def _list_of(self, view):
+    TABS = {KIND_PLAYLISTS: "P", KIND_SAVED: "S", KIND_LIKED: "L"}
+
+    def _list_of(self, view, kind=None):
+        """The list a view showed. A view this companion doesn't know (it restarted while the
+        addon kept the list) is fine for the tabs: the addon says which kind it was, and the tab's
+        list is opened again."""
         entry = self.views.get(view)
-        if entry is None:
-            self.log(f"browser: view {view} is unknown (the companion restarted?)")
-            self._message("Pick a list again (Mine, Saved or Liked).")
-            return None
-        return entry[0]
+        if entry is not None:
+            return entry[0]
+        if kind in self.TABS and self.web.signed_in():
+            self.log(f"browser: view {view} is from before a restart: using the {self.TABS[kind]} tab's list")
+            lst = self._list(self.TABS[kind])
+            self.stack = [lst]
+            return lst
+        self.log(f"browser: view {view} is unknown (the companion restarted?)")
+        self._message("That list is out of date: pick it again (Playlists, Saved or Liked).")
+        return None
 
     def _render(self, lst, page):
         """Fetch and draw one page: (picture, page, pages, rows)."""

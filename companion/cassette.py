@@ -299,6 +299,27 @@ class Companion:
         self.browser.set_look((r, g, b), font, look)
         self.live.set_look(max(8, min(400, cover)), font, look, (r, g, b))
 
+    def take_shot(self, args):
+        """SHOT <name> <x> <y> <w> <h>: the addon's showcase (/cassette showcase) asks for a picture of
+        part of the game window (pixels, from its top-left): saved to the showcase folder for
+        the download pages. Only what's on screen there is read; nothing is sent to the game."""
+        import re
+        from PIL import Image
+        if len(args) < 5 or not all(a.isdigit() for a in args[1:5]):
+            return
+        name = re.sub(r"[^a-z0-9-]", "", args[0].lower())[:40] or "shot"
+        x, y, w, h = (int(a) for a in args[1:5])
+        hwnd = strip.wow_window()
+        if not hwnd or w < 8 or h < 8 or w > 4000 or h > 3000:
+            return
+        im = Image.frombuffer("RGBA", (w, h), strip.grab(hwnd, w, h, x, y), "raw", "BGRA", 0, 1).convert("RGB")
+        folder = os.path.join(DATA_DIR, "showcase")
+        os.makedirs(folder, exist_ok=True)
+        self.shots = getattr(self, "shots", 0) + 1
+        path = os.path.join(folder, f"{time.strftime('%H%M%S')}-{self.shots:02d}-{name}.png")
+        im.save(path)
+        log(f"showcase: saved {os.path.basename(path)} ({w}x{h})")
+
     def on_message(self, data):
         """A message from the addon (see Strip.lua): seven 16-bit numbers - time, session, next
         mail, record, art, view, pixels per unit x100 - then the command as text."""
@@ -316,6 +337,9 @@ class Companion:
         self.last_game = time.time()
         if self.live.hello(nonce, mail, record, art, view, ppu, now - age) and self.mixer.duck < 0.999:
             self.mixer.do("set_duck", 100)  # a new game session (a /reload) starts undipped
+        if cmd == "SHOT":
+            self.take_shot(args)
+            return
         if cmd == "LOOK":
             self.on_look(args)
             return
@@ -328,10 +352,12 @@ class Companion:
                 self.browser.do("search", " ".join(args)[:100])
             elif cmd == "BK" and nums:
                 self.browser.do("back", nums[0])
-            elif cmd in ("PG", "OP") and len(nums) >= 2:
-                self.browser.do({"PG": "page", "OP": "open"}[cmd], nums[0], nums[1])
+            # (a third number, from newer addons: the kind of list the view showed)
+            kind = nums[2] if len(nums) >= 3 else None
+            if cmd in ("PG", "OP") and len(nums) >= 2:
+                self.browser.do({"PG": "page", "OP": "open"}[cmd], nums[0], nums[1], kind)
             elif cmd in ("PL", "PS") and len(nums) >= 2:
-                self.browser.do("play", nums[0], nums[1], cmd == "PS")
+                self.browser.do("play", nums[0], nums[1], cmd == "PS", kind)
             # the new page or the song changing answers these; a slow Spotify (search) mustn't
             # look like the companion stopped, so say we heard if nothing's out in a moment
             timer = threading.Timer(1.2, self.live.ack, (time.time(),))

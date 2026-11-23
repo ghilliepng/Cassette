@@ -308,7 +308,7 @@ function JB:BrowserClick(k, i, button)
   local pic = L and L.pics[k]
   if not pic or i > pic.rows or L.kind == KIND.MESSAGE then return end
   local row = k * ROWS + (i - 1)
-  local arg = pic.n .. " " .. row
+  local arg = pic.n .. " " .. row .. " " .. L.kind   -- (the kind: see browse.Browser._list_of)
   if L.kind == KIND.PLAYLISTS and not button then
     self:BrowserCommand("OP", arg, 0)   -- open one of your playlists
     return
@@ -485,7 +485,7 @@ function JB:UpdateScroll(elapsed)
       if (not L.asked[p] or now - L.asked[p] > 4) and waiting < 2 then
         L.asked[p] = now
         waiting = waiting + 1
-        self:Command("PG", L.ref .. " " .. p)
+        self:Command("PG", L.ref .. " " .. p .. " " .. L.kind)
         self:PollFast(2, 0.1)
       end
       if p >= first and p <= last then   -- "Loading..." where a page will be

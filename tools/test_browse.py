@@ -267,6 +267,15 @@ def main():
     check("...and not again for the same lists", not [v for v in live.views[before:] if v["kind"] > 16])
     b.ahead = False
 
+    # a view from before a restart (the addon kept the tab): the tab's list is opened again
+    b2 = browse.Browser(web, live, lambda: None, FONT, print)
+    b2.ahead = False
+    web.refuse.discard("collection")  # (a step before made Spotify refuse Liked plays)
+    n = len(web.played)
+    run(b2, "play", 4242, 3, False, browse.KIND_LIKED)
+    check("a click in a kept Liked list after a restart still plays that song",
+          len(web.played) == n + 1 and web.played[-1]["offset"] == {"uri": "spotify:track:3"})
+
     run(b, "open", 999, 0)
     check("a click on an unknown view (companion restarted) gets a message", live.views[-1]["kind"] == 6)
 
