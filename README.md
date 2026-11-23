@@ -26,24 +26,6 @@ Made for **WoW Forever**. Windows only.
 - **Keeps itself up to date:** when there's a new version of the app, the game and the tray say
   so, and one click installs it.
 
-## Screenshots
-
-**Three themes:** Classic, Modern and EllesmereUI.
-
-<img src="docs/screenshots/themes.png" width="480" alt="The player in the Classic, Modern and EllesmereUI themes">
-
-**Five layouts:** bar (above), card, stacked with the controls below or above, and slim.
-
-<img src="docs/screenshots/layouts.png" width="640" alt="The card, stacked and slim layouts">
-
-**Search** for songs, albums and artists, and play them from the list.
-
-<img src="docs/screenshots/search.png" width="480" alt="Search results in the browser">
-
-**Options**, and the **first-time setup** that walks new players through it.
-
-<img src="docs/screenshots/options.png" width="480" alt="The options window"> <img src="docs/screenshots/setup.png" width="380" alt="The first-time setup window">
-
 ## How it works (and why there's an app)
 
 WoW addons can't talk to other programs, so Cassette comes in two parts:
@@ -141,3 +123,21 @@ The app bundles some third-party libraries, each under its own licence: see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 Not affiliated with Spotify or Blizzard Entertainment.
+
+## Screenshots
+
+**Three themes:** Classic, Modern and EllesmereUI.
+
+<img src="docs/screenshots/themes.png" width="480" alt="The player in the Classic, Modern and EllesmereUI themes">
+
+**Five layouts:** bar (above), card, stacked with the controls below or above, and slim.
+
+<img src="docs/screenshots/layouts.png" width="640" alt="The card, stacked and slim layouts">
+
+**Search** for songs, albums and artists, and play them from the list.
+
+<img src="docs/screenshots/search.png" width="480" alt="Search results in the browser">
+
+**Options**, and the **first-time setup** that walks new players through it.
+
+<img src="docs/screenshots/options.png" width="480" alt="The options window"> <img src="docs/screenshots/setup.png" width="380" alt="The first-time setup window">
