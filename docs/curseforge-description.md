@@ -22,6 +22,7 @@ live progress bar and the controls, right in your UI.
 
 WoW addons can't talk to Spotify on their own, so Cassette comes with a small app that runs in
 your system tray. **Download it from GitHub:** https://github.com/ghilliepng/Cassette/releases/latest
+
 It tells you in game when there's a new version, and updates itself with one click.
 
 When you run the installer, Windows will probably say **"Windows protected your PC"**. That's
