@@ -1,6 +1,4 @@
-<!-- Donate button: put your Ko-fi username in place of KOFI_USERNAME, then remove these comment marks
-[![Donate](https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/KOFI_USERNAME)
--->
+[![Donate](https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/ghilliepng)
 
 # Cassette
 
