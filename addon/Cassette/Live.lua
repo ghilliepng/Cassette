@@ -179,6 +179,9 @@ function JB:ApplyRecord(v)
     if self.db.musicAppChanged or not self:IsSpotify() then self:SendMusicApp(true) end
   end
   s.connected, s.everConnected, s.waitingSince, s.probeSince = true, true, nil, nil
+  if self.db.autoShow and s.playing and s.available then   -- hidden at login: music brings it up
+    self.db.shown, self.db.autoShow = true, false
+  end
   if v[1] ~= s.art then
     s.art = v[1]
     if s.art > 0 then

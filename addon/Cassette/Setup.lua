@@ -96,7 +96,9 @@ function JB:CreateSetup()
   theme:SetPoint("TOPLEFT", f.looks, "TOPLEFT", 0, 0)
   local style = JB:StyleChoice(f.looks, W - 56)
   style:SetPoint("TOPLEFT", theme, "BOTTOMLEFT", 0, -10)
-  f.looks:SetSize(W - 56, theme:GetHeight() + 10 + style:GetHeight())
+  local hide = JB:HideIdleCheck(f.looks)
+  hide:SetPoint("TOPLEFT", style, "BOTTOMLEFT", 0, -10)
+  f.looks:SetSize(W - 56, theme:GetHeight() + 10 + style:GetHeight() + 10 + 18)
 
   local done = UI.Button(f, "Done", 90, function()
     JB.db.setupDone = true
@@ -136,10 +138,10 @@ function JB:RefreshSetup()
       or "The controls work with any account. To browse your playlists, liked songs and search here, "
       .. "connect it (Spotify allows this with Premium):")
   elseif self:MusicApp() == "youtube" then
-    f.spotifyText:SetText("Play it in your browser, in YouTube Music's installed app or in a YouTube Music "
+    f.spotifyText:SetText(JB.BETA_NOTE .. " Play it in your browser, in YouTube Music's installed app or in a YouTube Music "
       .. "desktop app. In a browser, the volume is the whole browser's. Playlists and search are Spotify's only, for now.")
   else
-    f.spotifyText:SetText("Play it in the Apple Music app (or iTunes). Playlists and search are Spotify's only, for now.")
+    f.spotifyText:SetText(JB.BETA_NOTE .. " Play it in the Apple Music app (or iTunes). Playlists and search are Spotify's only, for now.")
   end
   f.spotifyButton:SetShown(spotify and (connected or self.setupPreview) and not account and true or false)
   local spoken = self.HasSpoken and self:HasSpoken()
@@ -183,9 +185,96 @@ function JB:ShowSetup()
 end
 
 -- At login: the first time ever, show it once the companion has had a moment to answer.
+-- Players who set up before an update get the "What's new" window once instead.
 function JB:StartSetup()
-  if self.db.setupDone then return end
-  C_Timer.After(4, function()
-    if not self.db.setupDone then self:ShowSetup() end
-  end)
+  if not self.db.setupDone then
+    self.db.newsSeen = JB.NEWS   -- a new player: the setup shows them all of it
+    C_Timer.After(4, function()
+      if not self.db.setupDone then self:ShowSetup() end
+    end)
+  elseif self.db.newsSeen ~= JB.NEWS then
+    C_Timer.After(5, function() self:ShowNews() end)
+  end
+end
+
+-- "What's new", for players who'd done the setup before this version: shown once.
+JB.NEWS = "0.2.0"
+local NEWS_TEXT = {   -- (the first words in the accent colour)
+  { "YouTube Music and Apple Music", " now work with the player. They're in beta, so they may "
+    .. "not work fully yet. Pick yours under Music app in the options." },
+  { "Minimap icon:", " left-click shows or hides the player, right-click opens the options." },
+  { "New option:", " hide the player at login when no music is playing. It comes back when music "
+    .. "starts, or with the minimap icon." },
+}
+
+function JB:ShowNews()
+  self.db.newsSeen = JB.NEWS
+  if not self.news then
+    local nw = 400
+    local f = UI.Window("CassetteNews", nw, 250, "What's new in Cassette " .. JB.NEWS)
+    self.news = f
+    f.lines = {}
+    for i = 1, #NEWS_TEXT do
+      local fs = UI.Text(f, 11.5)
+      fs:SetWidth(nw - 32)
+      fs:SetSpacing(3)
+      f.lines[i] = fs
+    end
+    f.hide = JB:HideIdleCheck(f)   -- the new option, right here
+    f.appLine = UI.Text(f, 11.5, "dim")
+    f.appLine:SetWidth(nw - 32)
+    f.appLine:SetSpacing(3)
+    local ok = UI.Button(f, "OK", 90, function() f:Hide() end, true)
+    ok:SetPoint("BOTTOMRIGHT", -16, 16)
+    local options = UI.Button(f, "Options", 90, function()
+      f:Hide()
+      JB:ToggleOptions()
+    end)
+    options:SetPoint("RIGHT", ok, "LEFT", -8, 0)
+    -- a newer app on GitHub (YouTube Music and Apple Music need 0.2.0): update it from here
+    f.update = UI.Button(f, "Update app", 110, function()
+      JB:UpdateApp()
+      JB:RefreshNews()
+    end, true)
+    f.update:SetPoint("BOTTOMLEFT", 16, 16)
+    f:SetScript("OnShow", function() JB:RefreshNews() end)
+  end
+  self.news:Show()
+  self:RefreshNews()
+end
+
+-- Its text and the app's state (Options.lua's status refresh calls this as news arrives)
+function JB:RefreshNews()
+  local f = self.news
+  if not f or not f:IsShown() then return end
+  local s = self.state
+  local r, g, b = self:Accent()
+  local hex = ("|cff%02x%02x%02x"):format(r * 255, g * 255, b * 255)
+  local y = -40
+  for i, fs in ipairs(f.lines) do
+    fs:ClearAllPoints()
+    fs:SetPoint("TOPLEFT", 16, y)
+    fs:SetText(hex .. NEWS_TEXT[i][1] .. "|r" .. NEWS_TEXT[i][2])
+    y = y - height(fs, 2) - 10
+  end
+  f.hide:ClearAllPoints()
+  f.hide:SetPoint("TOPLEFT", 16, y - 2)
+  y = y - 18 - 14
+  local app
+  if s.appUpdating then
+    app = ("Updating the Cassette app to %s. It restarts by itself in a few seconds."):format(s.appUpdating)
+  elseif s.appNewest and s.connected then
+    app = ("A new Cassette app is out: %s. Update it here, it only takes a moment."):format(s.appNewest)
+  elseif s.appOld then
+    app = "The Cassette app on your PC is too old to update itself: get the new one from GitHub."
+  end
+  f.appLine:SetShown(app ~= nil)
+  if app then
+    f.appLine:SetText(app)
+    f.appLine:ClearAllPoints()
+    f.appLine:SetPoint("TOPLEFT", 16, y)
+    y = y - height(f.appLine, 2) - 10
+  end
+  f.update:SetShown(s.appNewest and s.connected and not s.appUpdating and true or false)
+  f:SetHeight(-y + 52)
 end

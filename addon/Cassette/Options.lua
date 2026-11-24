@@ -38,7 +38,11 @@ local PARTS = {
 
 -- The music app the player follows (the first-time setup shows it too).
 function JB:MusicChoice(parent, width)
-  return UI.Choice(parent, "The player shows and controls", JB.MUSIC_APPS, width,
+  local choices = {}
+  for _, a in ipairs(JB.MUSIC_APPS) do
+    choices[#choices + 1] = { a[1], a[3] and (a[2] .. " (beta)") or a[2] }
+  end
+  return UI.Choice(parent, "The player shows and controls", choices, width,
     function() return (JB:MusicApp()) end, function(v) JB:SetMusicApp(v) end)
 end
 
@@ -92,7 +96,10 @@ function JB:CreateOptions()
     function(v) db.bgAlpha = v; JB:ApplyLook() end))
   L.add(UI.Check(f, "Lock in place", function() return db.locked end, function(v) db.locked = v end), 18, 4)
   L.add(UI.Check(f, "Show the player", function() return db.shown end,
-    function(v) db.shown = v; JB:RefreshWidget() end), 18, 6)
+    function(v) JB:SetShown(v) end), 18, 4)
+  L.add(JB:HideIdleCheck(f), 18, 4)
+  L.add(UI.Check(f, "Minimap icon", function() return db.minimapIcon end,
+    function(v) db.minimapIcon = v; JB:RefreshMinimapIcon() end), 18, 6)
   L.add(UI.Button(f, "Reset position", 110, function()
     db.point, db.scale = JB.DEFAULTS.point, 1
     apply()
@@ -152,6 +159,7 @@ end
 -- The app's and the account's state, kept current while the window is open (Widget.lua calls
 -- this whenever news arrives).
 function JB:RefreshOptionsStatus()
+  if self.RefreshNews then self:RefreshNews() end   -- (the What's new window's app line too)
   local f = self.options
   if not f or not f.spotifyStatus or not f:IsShown() then return end
   local s = self.state
@@ -163,6 +171,7 @@ function JB:RefreshOptionsStatus()
     text = text .. ("\nSpotify account: %s|r"):format(s.account and good .. "connected" or bad .. "not connected")
     if not s.account then text = text .. "\n" .. dim .. "Connect it for playlists, liked songs and search.|r" end
   else
+    if self:MusicBeta() then text = text .. "\n" .. dim .. JB.BETA_NOTE .. "|r" end
     text = text .. "\n" .. dim .. "Playlists, liked songs and search: Spotify only, for now.|r"
     if s.connected and not self:AppFollowsMusicApp() then
       text = text .. "\n" .. bad .. ("Update the app to use it with %s.|r"):format(self:MusicName())
@@ -195,15 +204,106 @@ function JB:ToggleOptions()
   self.options:SetShown(not self.options:IsShown())
 end
 
+-- "Hide the player at login when no music is playing" (the first-time setup shows it too)
+function JB:HideIdleCheck(parent)
+  return UI.Check(parent, "Hide at login if no music is playing",
+    function() return JB.db.hideIdle end,
+    function(v) JB.db.hideIdle = v; if not v then JB.db.autoShow = false end end)
+end
+
+-- The button: left-click shows or hides the player, right-click opens the options.
+local function onButton(button)
+  if button == "RightButton" then JB:ToggleOptions() else JB:ToggleShown() end
+end
+
+local function tooltip(tt)
+  tt:AddLine("Cassette")
+  tt:AddLine("Left-click: show or hide the player", 1, 1, 1)
+  tt:AddLine("Right-click: options", 1, 1, 1)
+end
+
 -- WoW's addon menu (the compartment by the minimap), where the client has one
-function Cassette_OnAddonCompartmentClick()
-  JB:ToggleOptions()
+function Cassette_OnAddonCompartmentClick(_, button)
+  onButton(button)
+end
+
+-- The minimap icon. Through LibDBIcon when another addon has loaded it (so minimap button
+-- collectors gather it); otherwise Cassette's own button on the minimap's edge, dragged round
+-- it. No libraries are bundled.
+local function placeIcon(b)
+  local a = math.rad(JB.db.minimapAngle or 200)
+  local r = (Minimap:GetWidth() / 2) + 10
+  b:ClearAllPoints()
+  b:SetPoint("CENTER", Minimap, "CENTER", math.cos(a) * r, math.sin(a) * r)
+end
+
+function JB:CreateMinimapIcon()
+  if self.minimapIcon or self.dbIcon or not Minimap then return end
+  local LS = _G.LibStub
+  local LDB = LS and LS("LibDataBroker-1.1", true)
+  local DBI = LS and LS("LibDBIcon-1.0", true)
+  if LDB and DBI then
+    local launcher = LDB:NewDataObject("Cassette", {
+      type = "launcher", icon = JB.MEDIA .. "icon",
+      OnClick = function(_, button) onButton(button) end, OnTooltipShow = tooltip,
+    })
+    self.db.minimapLDB = self.db.minimapLDB or {}
+    self.db.minimapLDB.hide = not self.db.minimapIcon
+    DBI:Register("Cassette", launcher, self.db.minimapLDB)
+    self.dbIcon = DBI
+    return
+  end
+  local b = CreateFrame("Button", "CassetteMinimapButton", Minimap)
+  self.minimapIcon = b
+  b:SetSize(31, 31)
+  b:SetFrameStrata("MEDIUM")
+  b:SetFrameLevel(8)
+  b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  b:RegisterForDrag("LeftButton")
+  b:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+  local icon = b:CreateTexture(nil, "BACKGROUND")
+  icon:SetSize(20, 20)
+  icon:SetPoint("CENTER", 0, 1)
+  icon:SetTexture(JB.MEDIA .. "icon")
+  local border = b:CreateTexture(nil, "OVERLAY")
+  border:SetSize(53, 53)
+  border:SetPoint("TOPLEFT")
+  border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+  b:SetScript("OnClick", function(_, button) onButton(button) end)
+  b:SetScript("OnEnter", function()
+    GameTooltip:SetOwner(b, "ANCHOR_LEFT")
+    tooltip(GameTooltip)
+    GameTooltip:Show()
+  end)
+  b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  b:SetScript("OnDragStart", function()
+    b:SetScript("OnUpdate", function()
+      local mx, my = Minimap:GetCenter()
+      local px, py = GetCursorPosition()
+      local scale = Minimap:GetEffectiveScale()
+      JB.db.minimapAngle = math.deg(math.atan2(py / scale - my, px / scale - mx))
+      placeIcon(b)
+    end)
+  end)
+  b:SetScript("OnDragStop", function() b:SetScript("OnUpdate", nil) end)
+  placeIcon(b)
+  b:SetShown(self.db.minimapIcon and true or false)
+end
+
+function JB:RefreshMinimapIcon()
+  if self.dbIcon then
+    self.db.minimapLDB.hide = not self.db.minimapIcon
+    if self.db.minimapIcon then self.dbIcon:Show("Cassette") else self.dbIcon:Hide("Cassette") end
+  elseif self.minimapIcon then
+    self.minimapIcon:SetShown(self.db.minimapIcon and true or false)
+  end
 end
 
 -- A page in WoW's own Settings, with a button to the options window, where the client has it
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("PLAYER_LOGIN")
 ev:SetScript("OnEvent", function()
+  pcall(JB.CreateMinimapIcon, JB)   -- (every addon is loaded by now, LibDBIcon included)
   if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory) then return end
   local panel = CreateFrame("Frame")
   local text = UI.Text(panel, 13)

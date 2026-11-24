@@ -4,7 +4,7 @@
 
 # Cassette
 
-**Control your music from inside World of Warcraft:** Spotify, YouTube Music or Apple Music. A
+**Control your music from inside World of Warcraft:** Spotify, or YouTube Music and Apple Music in beta. A
 compact player with the song that's playing, its cover, a live progress bar and the controls,
 right in your UI. It can also turn
 your music down while the [Spoken](https://www.curseforge.com/wow/addons/spoken) addon reads
@@ -17,7 +17,8 @@ Made for **WoW Forever**. Windows only.
 - **The player:** song, artist and cover, updated the moment the song changes, with play/pause,
   previous, next, shuffle and volume. Five layouts (bar, stacked with the controls below, stacked with them above, slim and card) and three themes:
   Classic, Modern and EllesmereUI.
-- **Spotify, YouTube Music or Apple Music:** pick one in the options. YouTube Music works in a
+- **Spotify, YouTube Music or Apple Music:** pick one in the options. YouTube Music and Apple
+  Music are in **beta**, so they may not work fully yet. YouTube Music works in a
   browser, its installed web app or a desktop app; Apple Music in its app or iTunes. See
   [Music apps](#music-apps).
 - **The browser** (the ☰ button, Spotify only): your playlists, playlists you've saved, liked songs, and search
@@ -101,7 +102,9 @@ pauses the one you leave.
   Spotify asks every player to create their own (free) developer app for this. The *Connect
   Spotify* window in the Cassette app walks you through it in about two minutes.
 
-### YouTube Music
+### YouTube Music (beta)
+
+In beta: it may not work fully yet. If something doesn't, please say on the Issues page.
 
 - Play it in a browser (Chrome, Edge, Brave, Firefox, Opera or Vivaldi), in YouTube Music's
   installed web app (the browser's **Install** option), or in a desktop app such as Pear Desktop
@@ -113,7 +116,9 @@ pauses the one you leave.
 - **Playlists, liked songs and search** are Spotify's only: YouTube Music doesn't let other apps
   browse or start your music.
 
-### Apple Music
+### Apple Music (beta)
+
+In beta: it may not work fully yet. If something doesn't, please say on the Issues page.
 
 - Play it in the Apple Music app (or iTunes). Play, pause, skip, shuffle and volume work from
   the player.

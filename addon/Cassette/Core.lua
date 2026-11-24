@@ -43,6 +43,11 @@ local DEFAULTS = {
   duckHold = 2,       -- seconds of quiet before the music comes back up
   setupDone = false,  -- the first-setup window has been finished once
   musicApp = "spotify", -- the app the player follows: a JB.MUSIC_APPS key
+  hideIdle = false,   -- at a fresh login, keep the player hidden until music plays
+  autoShow = false,   -- (this game session: hidden by hideIdle, so music playing brings it up)
+  minimapIcon = true, -- the minimap icon (left-click: the player; right-click: the options)
+  minimapAngle = 200, -- where it sits round the minimap, in degrees (when Cassette draws it)
+  newsSeen = nil,     -- the last "What's new" window shown (Setup.lua)
 }
 JB.DEFAULTS = DEFAULTS
 
@@ -51,9 +56,18 @@ JB.DEFAULTS = DEFAULTS
 -- and search (the browser) are Spotify's only.
 --------------------------------------------------------------------------------
 
-JB.MUSIC_APPS = {
-  { "spotify", "Spotify" }, { "youtube", "YouTube Music" }, { "apple", "Apple Music" },
+JB.MUSIC_APPS = {   -- key, name, beta (new: may not work fully yet)
+  { "spotify", "Spotify" }, { "youtube", "YouTube Music", true }, { "apple", "Apple Music", true },
 }
+JB.BETA_NOTE = "Beta: this may not work fully yet."
+
+function JB:MusicBeta()
+  local key = self:MusicApp()
+  for _, a in ipairs(self.MUSIC_APPS) do
+    if a[1] == key then return a[3] == true end
+  end
+  return false
+end
 JB.FOLLOWS_OTHERS = 2 * 32   -- the first app on the PC that can follow others: 0.2.0 (updates.py's code)
 
 function JB:MusicApp()
@@ -104,6 +118,18 @@ function JB:SetMusicApp(key)
   end
   if self.RefreshBrowser then self:RefreshBrowser() end
   if self.RefreshOptionsStatus then self:RefreshOptionsStatus() end
+end
+
+-- Show or hide the player: the minimap icon, the addon menu, /cassette and the options' check.
+-- The player's choice holds until the game closes (music no longer brings it up by itself).
+function JB:SetShown(shown)
+  self.db.shown, self.db.autoShow = shown and true or false, false
+  self:RefreshWidget()
+  if self.UI and self.UI.RefreshAll then self.UI.RefreshAll() end
+end
+
+function JB:ToggleShown()
+  self:SetShown(not self.db.shown)
 end
 
 function JB:Print(msg)
@@ -229,6 +255,11 @@ ev:SetScript("OnEvent", function(_, event, a1, a2)
         C_Timer.After(0.5, function() if JB.widget then JB:ApplyLook() end end)
       end)
     end
+    -- a fresh login (a1: isInitialLogin; not a /reload) with "hide when no music": hidden until
+    -- music plays (ApplyRecord) or the button brings it up. Never before the setup is done.
+    if a1 and JB.db.hideIdle and JB.db.setupDone then
+      JB.db.shown, JB.db.autoShow = false, true
+    end
     JB:StartLive(a2)  -- a2: isReloadingUi
     JB:CreateWidget()
     if JB.StartDuck then JB:StartDuck() end  -- Duck.lua (a new file may need a full restart)
@@ -244,8 +275,7 @@ SlashCmdList.CASSETTE = function(input)
   local cmd, arg = (input or ""):lower():match("^%s*(%S*)%s*(.-)%s*$")
   local db = JB.db
   if cmd == "" then
-    db.shown = not db.shown
-    JB:RefreshWidget()
+    JB:ToggleShown()
   elseif cmd == "options" or cmd == "config" or cmd == "settings" then
     if JB.ToggleOptions then JB:ToggleOptions() else JB:Print("restart WoW once to finish installing the options.") end
   elseif cmd == "setup" then

@@ -13,7 +13,7 @@ ADDON = os.path.join(os.path.dirname(os.path.dirname(HERE)), "addon", "Cassette"
 MOCK = os.path.join(HERE, "wowmock.lua")
 
 failed = 0
-for script, args in [("syntax.py", [ADDON]), ("test_widget.py", [ADDON, MOCK]), ("test_duck.py", [ADDON, MOCK]), ("test_live.py", [ADDON, MOCK]), ("test_strip.py", [ADDON, MOCK]), ("test_options.py", [ADDON, MOCK])]:
+for script, args in [("syntax.py", [ADDON]), ("test_widget.py", [ADDON, MOCK]), ("test_duck.py", [ADDON, MOCK]), ("test_live.py", [ADDON, MOCK]), ("test_strip.py", [ADDON, MOCK]), ("test_options.py", [ADDON, MOCK]), ("test_visibility.py", [ADDON, MOCK])]:
     print(f"== {script}")
     failed += subprocess.call([sys.executable, os.path.join(HERE, script), *args]) != 0
 print("ALL PASSED" if not failed else f"{failed} SUITE(S) FAILED")

@@ -2,13 +2,14 @@
 
 # Cassette
 
-**Control your music from inside WoW:** Spotify, YouTube Music or Apple Music. A compact player with the song that's playing, its cover, a
+**Control your music from inside WoW:** Spotify, or YouTube Music and Apple Music in beta. A compact player with the song that's playing, its cover, a
 live progress bar and the controls, right in your UI.
 
 - **Stays in sync:** song, artist and cover change the moment your music does.
 - **Play, pause, skip, shuffle and volume** with a click.
 - **Spotify, YouTube Music or Apple Music:** YouTube Music works in your browser, its
-  installed app or a desktop app; Apple Music in its app or iTunes.
+  installed app or a desktop app; Apple Music in its app or iTunes. YouTube Music and Apple Music
+  are in **beta**, so they may not work fully yet.
 - **Your Spotify:** playlists, liked songs, and search for songs, albums and artists, in a
   scrolling browser. The song that's playing is highlighted.
 - **Quieter during dialogue:** with [Spoken](https://www.curseforge.com/wow/addons/spoken), your
