@@ -12,6 +12,8 @@ live progress bar and the controls, right in your UI.
   are in **beta**, so they may not work fully yet.
 - **Your Spotify:** playlists, liked songs, and search for songs, albums and artists, in a
   scrolling browser. The song that's playing is highlighted.
+- **Out of the way when you want:** a minimap icon shows or hides the player, and an option
+  keeps it hidden at login until music starts.
 - **Quieter during dialogue:** with [Spoken](https://www.curseforge.com/wow/addons/spoken), your
   music turns down while NPCs talk, and back up when they finish.
 - **Highly customisable:** five layouts, three themes (Classic, Modern, EllesmereUI), any accent
